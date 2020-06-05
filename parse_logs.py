@@ -11,6 +11,10 @@ from colorama import Fore, Back, Style
 URLSS = "https://new.scoresaber.com/api/player/{}/full"
 ID_PLAYERS = {}
 MAPS_PLAYED = {}
+CSVF_HEADER = "Rank,Player,Acc,Left Average,Left Before,Precision,Left After,Right Average,Right Before,Precision,Right After,Miss,Failed\n"
+CSVF_HEADER_DISTANCE = "Rank,Player,Acc,Left Average,Left Before,Precision,Left After,Left Distance Saber,Left Distance Hand,Right Average,Right Before,Precision,Right After,Right Distance Saber,Right Distance Hand,Miss,Failed\n"
+CSVF_HEADER_AVERAGE = "Rank,AvRank,Player,Acc,Left Average,Left Before,Precision,Left After,Right Average,Right Before,Precision,Right After,Miss,Nb Map Played,Nb Map Failed\n"
+CSVF_HEADER_AVERAGE_DISTANCE = "Rank,AvRank,Player,Acc,Left Average,Left Before,Precision,Left After,Left Distance Saber,Left Distance Hand,Right Average,Right Before,Precision,Right After,Right Distance Saber,Right Distance Hand,Miss,Nb Map Played,Nb Map Failed\n"
 
 def clean_logfile(logfile):
 
@@ -58,18 +62,37 @@ def get_name_by_id(id_player):
     name_player = id_player
 
     if ID_PLAYERS.get(id_player):
-        return ID_PLAYERS[id_player]
+        return ID_PLAYERS[id_player]['name']
     else:
         try:
             infos_ssaber = requests.get(URLSS.format(id_player)).json()
             name_player = infos_ssaber['playerInfo']['name']
-            ID_PLAYERS[id_player] = name_player
+            ID_PLAYERS[id_player] = {}
+            ID_PLAYERS[id_player]['name'] = name_player
         except:
             pass
         
         return name_player
      
 
+def retrieve_player_infos(info_map):
+
+    id_player = info_map['playerID']
+    name = get_name_by_id(id_player)
+    ID_PLAYERS[id_player]["av_score"] = info_map['averageCutScore']
+    ID_PLAYERS[id_player]["cumu_cut"] = info_map['cummulativeCutScoreWithoutMultiplier']
+    ID_PLAYERS[id_player]["tot_score"] = info_map['totalScore']
+    ID_PLAYERS[id_player]["bad_cuts"] = info_map['badCutsCount']
+    ID_PLAYERS[id_player]["good_cuts"] = info_map['goodCutsCount']
+    ID_PLAYERS[id_player]["miss_cuts"] = info_map['missedCutsCount']
+    ID_PLAYERS[id_player]["clear_lvl"] = info_map['clearedLevelsCount']
+    ID_PLAYERS[id_player]["failed_lvl"] = info_map['failedLevelsCount']
+    ID_PLAYERS[id_player]["played_lvl"] = info_map['playedLevelsCount']
+    ID_PLAYERS[id_player]["fc"] = info_map['fullComboCount']
+    ID_PLAYERS[id_player]["hand_dist"] = info_map['handDistanceTravelled']
+    ID_PLAYERS[id_player]["time_played"] = info_map['timePlayed'] / 3600
+
+    print(f"{name} - time played: {ID_PLAYERS[id_player]['time_played']} - fc count : {ID_PLAYERS[id_player]['fc']}")
 
 def retrieve_relevant_infos(infos):
 
@@ -77,6 +100,10 @@ def retrieve_relevant_infos(infos):
     averages_dict = {} # stores averages per player
 
     for info_map in infos:
+
+        if info_map.get('saberAColor'):
+            retrieve_player_infos(info_map)
+            continue
         
         # Retrieving all relevant infos into variables
         name = get_name_by_id(info_map['playerID'])
@@ -88,10 +115,28 @@ def retrieve_relevant_infos(infos):
         acc = float(info_map['trackers']['scoreTracker']['modifiedRatio'])*100
         acc_left = float(info_map['trackers']['accuracyTracker']['accLeft'])
         acc_right = float(info_map['trackers']['accuracyTracker']['accRight'])
-        left_av_tuple = (float(info_map['trackers']['accuracyTracker']['leftAverageCut'][0]), float(info_map['trackers']['accuracyTracker']['leftAverageCut'][1]), float(info_map['trackers']['accuracyTracker']['leftAverageCut'][2]))
-        right_av_tuple = (float(info_map['trackers']['accuracyTracker']['rightAverageCut'][0]), float(info_map['trackers']['accuracyTracker']['rightAverageCut'][1]), float(info_map['trackers']['accuracyTracker']['rightAverageCut'][2]))
+        try:
+            left_av_tuple = (float(info_map['trackers']['accuracyTracker']['leftAverageCut'][0]), float(info_map['trackers']['accuracyTracker']['leftAverageCut'][1]), float(info_map['trackers']['accuracyTracker']['leftAverageCut'][2]))
+            right_av_tuple = (float(info_map['trackers']['accuracyTracker']['rightAverageCut'][0]), float(info_map['trackers']['accuracyTracker']['rightAverageCut'][1]), float(info_map['trackers']['accuracyTracker']['rightAverageCut'][2]))
+        except KeyError:
+            left_av_tuple = (0.0,0.0,0.0)
+            right_av_tuple = (0.0,0.0,0.0)
         map_name = f"{info_map['songName']} {info_map['songDifficulty']} {info_map['songArtist']} by {info_map['songMapper']}"
-
+        try:
+            # If BSD version supports distanceTracker
+            distance_rsaber = float(info_map['trackers']['distanceTracker']['rightSaber'])
+            distance_lsaber = float(info_map['trackers']['distanceTracker']['leftSaber'])
+            distance_lhand = float(info_map['trackers']['distanceTracker']['leftHand'])
+            distance_rhand = float(info_map['trackers']['distanceTracker']['rightHand'])
+            nb_with_distance = 1
+        except KeyError:
+            # distanceTracker not support
+            distance_rsaber = 0.0
+            distance_lsaber = 0.0
+            distance_lhand = 0.0
+            distance_rhand = 0.0
+            nb_with_distance = 0
+            
         if MAPS_PLAYED.get(map_name):
             if name in MAPS_PLAYED[map_name]['players']:
                 MAPS_PLAYED[map_name]['count'] += 1
@@ -108,6 +153,10 @@ def retrieve_relevant_infos(infos):
         acc_right_format = "{:.2f}".format(acc_right)
         left_av_format = "{:05.2f}, {:05.2f}, {:05.2f}".format(left_av_tuple[0], left_av_tuple[1], left_av_tuple[2])
         right_av_format = "{:05.2f}, {:05.2f}, {:05.2f}".format(right_av_tuple[0], right_av_tuple[1], right_av_tuple[2])
+        distance_rsaber_format = "{:.2f}".format(distance_rsaber) if distance_rsaber else ""
+        distance_lsaber_format = "{:.2f}".format(distance_lsaber) if distance_lsaber else ""
+        distance_lhand_format =  "{:.2f}".format(distance_rhand) if distance_rhand else "" 
+        distance_rhand_format =  "{:.2f}".format(distance_lhand) if distance_lhand else "" 
         player_infos = { 
                 'id': name,
                 'score': score,
@@ -120,6 +169,10 @@ def retrieve_relevant_infos(infos):
                 'miss': misses,
                 'map_passed': map_passed,
                 'failed_time': failed_time,
+                'distance_rsaber': distance_rsaber_format,
+                'distance_lsaber': distance_lsaber_format,
+                'distance_rhand': distance_rhand_format,
+                'distance_lhand': distance_lhand_format,
             }
         try:
             map_dict[map_name].append(player_infos)
@@ -145,6 +198,12 @@ def retrieve_relevant_infos(infos):
             averages_dict[name]['pause'] += pauses
             averages_dict[name]['miss'] += misses
             averages_dict[name]['nb_map_played'] += 1
+            if distance_lhand:
+                averages_dict[name]['distance_rsaber'] += distance_rsaber
+                averages_dict[name]['distance_lsaber'] += distance_lsaber
+                averages_dict[name]['distance_rhand'] += distance_rhand
+                averages_dict[name]['distance_lhand'] += distance_lhand
+                averages_dict[name]['nb_with_distance'] += 1
         except KeyError:
             if map_passed:
                 list_map_passed = [map_name]
@@ -171,6 +230,11 @@ def retrieve_relevant_infos(infos):
                 'list_map_failed': list_map_failed,
                 'nb_map_failed': nb_map_failed,
                 'nb_map_played': 1,
+                'distance_rsaber': distance_rsaber,
+                'distance_lsaber': distance_lsaber,
+                'distance_rhand': distance_rhand,
+                'distance_lhand': distance_lhand,
+                'nb_with_distance': nb_with_distance,
             }
             averages_dict[name] = averages_infos
     return map_dict, averages_dict
@@ -197,11 +261,14 @@ def show_relevant_infos(maps_dict):
         print(f"{Style.BRIGHT}{map_name}{Style.RESET_ALL}")
         sorted_pinfos = sorted(infos[map_name], key=lambda kv: kv["score"], reverse=True)
         for rank, pinfos in enumerate(sorted_pinfos):
-            print(f"     {rank + 1} -  {pinfos['id']:20} with {pinfos['acc']:5}   (left: {pinfos['accLeft']:6} [{pinfos['leftAv']:>18}], right: {pinfos['accRight']:6} [{pinfos['rightAv']:>18}], {pinfos['miss']} miss)")
+            #if pinfos['distance_rsaber']:
+            print(f"     {rank + 1} -  {pinfos['id']:28} with {pinfos['acc']:5}   (left: {pinfos['accLeft']:6} [{pinfos['leftAv']:>18}]{Style.DIM}{Fore.BLUE}[{pinfos['distance_lsaber']:>8},{pinfos['distance_lhand']:>8}]{Style.RESET_ALL}, right: {pinfos['accRight']:6} [{pinfos['rightAv']:>18}]{Style.DIM}{Fore.BLUE}[{pinfos['distance_rsaber']:>8},{pinfos['distance_rhand']:>8}]{Style.RESET_ALL}, {pinfos['miss']} miss)")
+            #else:
+            #    print(f"     {rank + 1} -  {pinfos['id']:20} with {pinfos['acc']:5}   (left: {pinfos['accLeft']:6} [{pinfos['leftAv']:>18}], right: {pinfos['accRight']:6} [{pinfos['rightAv']:>18}], {pinfos['miss']} miss)")
             if int(pinfos['pause']) > 0:
                 print(f"                {Fore.RED}/!\ Paused {pinfos['pause']} times !!!{Style.RESET_ALL}")
             if not pinfos['map_passed']:
-                print(f"                {Fore.RED}/!\ Map failed at {pinfos['failed_time']:.2f}{Style.RESET_ALL}")
+                print(f"                {Fore.RED}/!\ Map failed at {pinfos['failed_time']:.2f} seconds{Style.RESET_ALL}")
         print()
 
 
@@ -250,6 +317,16 @@ def show_averages(averages_dict, maps_dict, overall=0):
         map_failed = ", ".join(pinfos['list_map_failed'])
         nb_map_failed = pinfos['nb_map_failed']
         nb_map_passed = pinfos['nb_map_passed']
+        if pinfos['nb_with_distance']:
+            distance_rsaber = pinfos['distance_rsaber'] / pinfos['nb_with_distance']
+            distance_lsaber = pinfos['distance_lsaber'] / pinfos['nb_with_distance']
+            distance_rhand  = pinfos['distance_rhand'] / pinfos['nb_with_distance']
+            distance_lhand  = pinfos['distance_lhand'] / pinfos['nb_with_distance']
+        else:
+            distance_rsaber = 0 
+            distance_lsaber = 0 
+            distance_rhand  = 0 
+            distance_lhand  = 0 
 
         rank_format = "{:.2f}".format(av_rank)
         acc_format = "{:.2f}".format(av_acc)
@@ -257,17 +334,28 @@ def show_averages(averages_dict, maps_dict, overall=0):
         acc_right_format = "{:.2f}".format(av_acc_right)
         left_av_format = "{:05.2f}, {:05.2f}, {:05.2f}".format(av_left_ac_before, av_left_ac_precision, av_left_ac_after)
         right_av_format = "{:05.2f}, {:05.2f}, {:05.2f}".format(av_right_ac_before, av_right_ac_precision, av_right_ac_after)
-        print(f"{rank+1} - {Style.DIM}(AvRank:{rank_format}){Style.RESET_ALL}  -  {Style.BRIGHT}{name:20}{Style.RESET_ALL} with {acc_format:5}   (left: {acc_left_format:6} [{left_av_format:>18}], right: {acc_right_format:6} [{right_av_format:>18}], {av_misses:.2f} miss)")
+        distance_rsaber_format = "{:.2f}".format(distance_rsaber) if distance_rsaber else ""
+        distance_lsaber_format = "{:.2f}".format(distance_lsaber) if distance_lsaber else ""
+        distance_rhand_format  = "{:.2f}".format(distance_rhand) if distance_rhand else "" 
+        distance_lhand_format  = "{:.2f}".format(distance_lhand) if distance_lhand else "" 
+        #if distance_rhand:
+        print(f"{rank+1} - {Style.DIM}(AvRank:{rank_format}){Style.RESET_ALL} - {Style.BRIGHT}{name:28}{Style.RESET_ALL} with {acc_format:5}   (left: {acc_left_format:6} [{left_av_format:>18}]{Style.DIM}{Fore.BLUE}[{distance_lsaber_format:>8},{distance_lhand_format:>8}]{Style.RESET_ALL}, right: {acc_right_format:6} [{right_av_format:>18}]{Style.DIM}{Fore.BLUE}[{distance_rsaber_format:>8},{distance_rhand_format:>8}]{Style.RESET_ALL}, {av_misses:.2f} miss)")
+        #else:
+        #    print(f"{rank+1} - {Style.DIM}(AvRank:{rank_format}){Style.RESET_ALL} - {Style.BRIGHT}{name:20}{Style.RESET_ALL} with {acc_format:5}   (left: {acc_left_format:6} [{left_av_format:>18}], right: {acc_right_format:6} [{right_av_format:>18}], {av_misses:.2f} miss)")
         if not played_all:
             print(f"{Fore.RED}                             /!\ Can be tricky to analyze since this player {Style.BRIGHT}didn't play all maps ({pinfos['nb_map_played']}/{nb_map_session}){Style.RESET_ALL}")
         if nb_map_failed > 0:
             print(f"{Fore.YELLOW}                             /!\ Can be tricky to analyze since this player {Style.BRIGHT}failed some maps ({nb_map_failed}/{nb_map_session}){Style.RESET_ALL}")
         if int(pinfos['pause']) > 0:
             print(f"                /!\ Paused {av_pauses} times !!!")
-        line_in_csv.append((rank+1, rank_format, name, acc_format, acc_left_format, left_av_format, acc_right_format, right_av_format, av_misses, pinfos['nb_map_played'], nb_map_failed, nb_map_session))
+        #if distance_rhand:
+        line_in_csv.append((distance_lsaber_format,distance_rsaber_format,distance_lhand_format,distance_rhand_format,rank+1, rank_format, name, acc_format, acc_left_format, left_av_format, acc_right_format, right_av_format, av_misses, pinfos['nb_map_played'], nb_map_failed, nb_map_session))
+        #else:
+        #    line_in_csv.append((rank+1, rank_format, name, acc_format, acc_left_format, left_av_format, acc_right_format, right_av_format, av_misses, pinfos['nb_map_played'], nb_map_failed, nb_map_session))
         rank += 1
     print()
     averages_as_csv(line_in_csv)
+ 
 
 def relevant_infos_as_csv(maps_dict):
 
@@ -280,22 +368,35 @@ def relevant_infos_as_csv(maps_dict):
         csvf.write("\nDetails per map")
         for map_name in infos.keys():
             csvf.write(f"\n{map_name}\n")
-            csvf.write("Rank,Player,Acc,Left Average,Left Before,Precision,Left After,Right Average,Right Before,Precision,Right After,Miss,Failed\n")
+            #if infos[map_name][0]['distance_rhand']:
+            csvf.write(CSVF_HEADER_DISTANCE)
+            #else:
+            #    csvf.write(CSVF_HEADER)
             sorted_pinfos = sorted(infos[map_name], key=lambda kv: kv["score"], reverse=True)
             for rank, pinfos in enumerate(sorted_pinfos):
                 failed = f"Failed at {pinfos['failed_time']:.2f}" if not pinfos['map_passed'] else ""
-                csvf.write(f"{rank + 1},{pinfos['id']},{pinfos['acc']},{pinfos['accLeft']},{pinfos['leftAv']},{pinfos['accRight']},{pinfos['rightAv']},{pinfos['miss']},{failed}\n")
+                #if pinfos['distance_rhand']:
+                csvf.write(f"{rank + 1},{pinfos['id']},{pinfos['acc']},{pinfos['accLeft']},{pinfos['leftAv']},{pinfos['distance_lsaber']},{pinfos['distance_lhand']},{pinfos['accRight']},{pinfos['rightAv']},{pinfos['distance_rsaber']},{pinfos['distance_rhand']},{pinfos['miss']},{failed}\n")
+                #else:
+                #    csvf.write(f"{rank + 1},{pinfos['id']},{pinfos['acc']},{pinfos['accLeft']},{pinfos['leftAv']},{pinfos['accRight']},{pinfos['rightAv']},{pinfos['miss']},{failed}\n")
+
 
 def averages_as_csv(lines):
     with open(f"av_infos-{strftime('%Y%m%d')}.csv",'w') as csvf:
         csvf.write(f"{strftime('%d/%m/%Y')}\n")
         csvf.write("Nb Maps Session,Type\n")
         csvf.write(f"{lines[0][-1]},\n\n")
-        csvf.write("Rank,AvRank,Player,Acc,Left Average,Left Before,Precision,Left After,Right Average,Right Before,Precision,Right After,Miss,Nb Map Played,Nb Map Failed\n")
+        #if len(lines[0]) > 12:
+        #    csvf.write(CSVF_HEADER_AVERAGE)
+        #else:
+        csvf.write(CSVF_HEADER_AVERAGE_DISTANCE)
         for line in lines:
-            rank, rank_format, name, acc_format, acc_left_format, left_av_format, acc_right_format, right_av_format, av_misses, nb_map_played, nb_map_failed, nb_map_session = line
-            csvf.write(f"{rank},{rank_format},{name},{acc_format},{acc_left_format},{left_av_format},{acc_right_format},{right_av_format},{av_misses:.2f},{nb_map_played},{nb_map_failed}\n")
-
+            #if len(line) > 12:
+            dls, dlh, drs, drh, rank, rank_format, name, acc_format, acc_left_format, left_av_format, acc_right_format, right_av_format, av_misses, nb_map_played, nb_map_failed, nb_map_session = line
+            csvf.write(f"{rank},{rank_format},{name},{acc_format},{acc_left_format},{left_av_format},{dls},{dlh},{acc_right_format},{right_av_format},{drs},{drh},{av_misses:.2f},{nb_map_played},{nb_map_failed}\n")
+            #else:
+            #    rank, rank_format, name, acc_format, acc_left_format, left_av_format, acc_right_format, right_av_format, av_misses, nb_map_played, nb_map_failed, nb_map_session = line
+            #    csvf.write(f"{rank},{rank_format},{name},{acc_format},{acc_left_format},{left_av_format},{acc_right_format},{right_av_format},{av_misses:.2f},{nb_map_played},{nb_map_failed}\n")
 
 def get_files_in_dir(directory_in_str):
     
