@@ -15,6 +15,7 @@ CSVF_HEADER = "Rank,Player,Acc,Left Average,Left Before,Precision,Left After,Rig
 CSVF_HEADER_DISTANCE = "Rank,Player,Acc,Left Average,Left Before,Precision,Left After,Left Distance Saber,Left Distance Hand,Right Average,Right Before,Precision,Right After,Right Distance Saber,Right Distance Hand,Miss,Failed\n"
 CSVF_HEADER_AVERAGE = "Rank,AvRank,Player,Acc,Left Average,Left Before,Precision,Left After,Right Average,Right Before,Precision,Right After,Miss,Nb Map Played,Nb Map Failed\n"
 CSVF_HEADER_AVERAGE_DISTANCE = "Rank,AvRank,Player,Acc,Left Average,Left Before,Precision,Left After,Left Distance Saber,Left Distance Hand,Right Average,Right Before,Precision,Right After,Right Distance Saber,Right Distance Hand,Miss,Nb Map Played,Nb Map Failed\n"
+MAPS_MISC_INFOS = {}
 
 def clean_logfile(logfile):
 
@@ -121,7 +122,9 @@ def retrieve_relevant_infos(infos):
         except KeyError:
             left_av_tuple = (0.0,0.0,0.0)
             right_av_tuple = (0.0,0.0,0.0)
-        map_name = f"{info_map['songName']} {info_map['songDifficulty']} {info_map['songArtist']} by {info_map['songMapper']}"
+        if "," in info_map['songMapper']:
+            info_map['songMapper'] = info_map['songMapper'].split(',')[0]
+        map_name = f"{info_map['songName']} {info_map['songArtist']} {info_map['songDifficulty']} by {info_map['songMapper']}"
         try:
             # If BSD version supports distanceTracker
             distance_rsaber = float(info_map['trackers']['distanceTracker']['rightSaber'])
@@ -408,13 +411,155 @@ def get_files_in_dir(directory_in_str):
     return list_files
 
 def merge_files(cleaned_list):
-    merged_file = 'cleaned.log'
+    merged_file = f"cleaned-{strftime('%Y%m%d')}.log"
     with open(merged_file, 'w') as outfile:
         for fname in cleaned_list:
             with open(fname) as infile:
                 outfile.write(infile.read())
     
     return merged_file
+
+def load_diff_maps():
+    #maps_train_file = "train.json"
+    bswc_diff_maps_file = "maps_diffs.csv"
+    type_maps_file = "maps_types.csv"
+
+
+    # Bsaver considers me as a bot... Nice !
+    #with open(maps_train_file, "r") as mtf:
+    #    maps_train = json.load(mtf)
+    #for map_train in maps_train['songs']:
+        #maps_bsaver = requests.get(f"https://beatsaver.com/api/maps/by-hash/{hash_id}").json()
+        #print(maps_bsaver["metadata"]["songName"], maps_bsaver["metadata"]["songAuthorName"], "by", maps_bsaver["metadata"]["songName"])
+
+
+    with open(type_maps_file, 'r') as tmf:
+        for line in tmf:
+            splitted = line.split(',')
+            time_map = splitted[-1][:-1]
+            type_map = splitted[-2]
+            diff_map = splitted[-3]
+            mapper_map = splitted[-4]
+            author_map = splitted[-5]
+            name_map = splitted[0]
+            if len(splitted[0:-5]) > 1:
+                name_map = ",".join(splitted[0:-5])
+                #name_map = name_map[:-1]
+            name_map_full = f"{name_map} {author_map} {diff_map} by {mapper_map}".lower()
+            #print(name_map_full)
+            MAPS_MISC_INFOS[name_map_full.strip()] = {
+                "time": time_map,
+                "type": type_map,
+                "diff": diff_map,
+                "mapper": mapper_map,
+                "author": author_map,
+            } 
+
+
+    #print(json.dumps(MAPS_MISC_INFOS, indent=2))
+
+    with open(bswc_diff_maps_file, 'r') as dmf:
+        for line in dmf:
+            splitted = line.split(',')
+            diff = splitted[0]
+            name = ",".join(splitted[1:])
+            name = name[:-1].lower()
+            if name:
+                MAPS_MISC_INFOS[name.strip()]['bswc_type'] = diff
+
+def classify_reference_maps_per_type(maps_by_name):
+
+    type_maps = {}
+
+    for name, infos in maps_by_name.items():
+        try:
+            type_maps[infos['type']].append(name)
+        except KeyError:
+            type_maps[infos['type']] = [name]
+    return type_maps
+
+def classify_played_maps_per_type_and_date(maps_dict, date, played_type_maps):
+
+    for map_name, infos in maps_dict.items():
+        try:
+            map_misc_infos = MAPS_MISC_INFOS[map_name.lower()]
+        except KeyError:
+            print(f"Map not referenced : {map_name.lower()}")
+            continue
+        try:
+            played_type_maps[map_misc_infos['type']][date].append({ map_name: infos})
+        except KeyError:
+            played_type_maps[map_misc_infos['type']][date] = [{ map_name: infos}]
+
+    #print(json.dumps(played_type_maps, indent=2))
+
+    return played_type_maps
+
+def update_averages_for_map(infos_players, players_averages):
+
+    for player in infos_players:
+        try:
+            players_averages[player['id']]['acc'] += float(player['acc'])
+            players_averages[player['id']]['nb_map_played'] += 1
+        except KeyError:
+            players_averages[player['id']] = { 
+                    'acc': float(player['acc']),
+                    'nb_map_played': 1,
+            }
+
+    return players_averages
+
+def get_averages_on_date(maps, date, players_averages):
+    for map_played in maps:
+        map_name, infos_players = map_played.popitem()
+        players_averages = update_averages_for_map(infos_players, players_averages)
+
+    for name_p, stats in players_averages.items():
+        players_averages[name_p][date] = {'av_acc': float(stats['acc']) / float(stats['nb_map_played'])}
+
+    return players_averages
+
+def graphs_averages_per_type_and_date_as_csv(maps_per_type_and_date):
+
+    # OMG, what an awful algorithm.
+    # Must optimize this...(maybe rethink data structure actually)
+    with open("graphs_averages_per_type_and_date.csv", "w") as gaptadf:
+        for type_maps in maps_per_type_and_date.keys():
+            gaptadf.write(f"{type_maps}\n")
+            dates = sorted(maps_per_type_and_date[type_maps].keys())
+            gaptadf.write(f"Players,{','.join(dates)}\n")
+            players_averages = {}
+            nb_players = 0
+            for date in dates:
+                players_averages = get_averages_on_date(maps_per_type_and_date[type_maps][date], date, players_averages) 
+
+            nb_players = len(players_averages.keys()) 
+            for name_p, stats in players_averages.items():
+                gaptadf.write(f"{name_p},")
+                for date in dates: 
+                    try:
+                        gaptadf.write(f"{stats[date]['av_acc']:.2f},")
+                    except KeyError:
+                        gaptadf.write(",")
+                gaptadf.write("\n")
+            gaptadf.write("\n" * (11-nb_players))
+
+
+def classify_files_of_directory_by_date(directory):
+    list_files = get_files_in_dir(directory)
+    #Sort files by date:
+    #list_files_sorted = sorted(list_files, key=lambda f: f.split('-')[1][:-4])
+    files_by_date = {}
+    for logfile in list_files:
+        print(logfile)
+        date = logfile.split('_')[1][:-4]
+        date = f"{date[:4]}-{date[4:6]}-{date[6:]}"
+        print(date)
+        try:
+            files_by_date[date].append(logfile)
+        except KeyError:
+            files_by_date[date]= [logfile]
+    return files_by_date
 
 def main():
     parser = ArgumentParser(
@@ -441,6 +586,12 @@ def main():
         help="Numbers of maps over ALL sessions (this option is not useful if you need to calculate only 1 session stats)",
         default=0,
     )
+    parser.add_argument(
+        "-g",
+        "--graph",
+        type=bool,
+        help="Indicates that graph must be generated (files in directory must have a name like {player}-{date}. For example: dude-20200606.log)",
+    )
 
     args = parser.parse_args() 
 
@@ -462,9 +613,30 @@ def main():
     show_relevant_infos(map_dict)
     relevant_infos_as_csv(map_dict)
 
+    #print(json.dumps(map_dict, indent=2))
     #print(json.dumps(averages_dict, indent=2))
     #show_relevant_infos(averages_dict)
     show_averages(averages_dict, map_dict, args.overall)
+
+    if args.graph and args.directory:
+        # Prepare maps infos with difficulty and stuff
+        load_diff_maps()
+        global_type_maps = classify_reference_maps_per_type(MAPS_MISC_INFOS)
+        types = global_type_maps.keys()
+        maps_per_type_and_date = {}
+        for type_maps in types:
+            maps_per_type_and_date[type_maps] = {}
+
+        # Try to cut the problem into pieces (by days)
+        files_by_date = classify_files_of_directory_by_date(args.directory)
+        for date, files in files_by_date.items():
+            logfile = merge_files(files)
+            cleaned_logfile = clean_logfile(logfile)
+            infos = parse_logfile(cleaned_logfile)
+            map_dict, averages_dict =  retrieve_relevant_infos(infos)
+            
+            maps_per_type_and_date = classify_played_maps_per_type_and_date(map_dict, date, maps_per_type_and_date)
+        graphs_averages_per_type_and_date_as_csv(maps_per_type_and_date)
 
 if __name__ == "__main__":
     main()
