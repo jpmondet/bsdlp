@@ -2,7 +2,7 @@
 
 from sys import exit
 from os import access, R_OK, SEEK_SET, listdir, fsencode, fsdecode
-from time import strftime
+from time import strftime, strptime
 from argparse import ArgumentParser
 import requests
 import json
@@ -16,6 +16,7 @@ CSVF_HEADER_DISTANCE = "Rank,Player,Acc,Left Average,Left Before,Precision,Left 
 CSVF_HEADER_AVERAGE = "Rank,AvRank,Player,Acc,Left Average,Left Before,Precision,Left After,Right Average,Right Before,Precision,Right After,Miss,Nb Map Played,Nb Map Failed\n"
 CSVF_HEADER_AVERAGE_DISTANCE = "Rank,AvRank,Player,Acc,Left Average,Left Before,Precision,Left After,Left Distance Saber,Left Distance Hand,Right Average,Right Before,Precision,Right After,Right Distance Saber,Right Distance Hand,Miss,Nb Map Played,Nb Map Failed\n"
 MAPS_MISC_INFOS = {}
+DATETIME = ""
 
 def clean_logfile(logfile):
 
@@ -364,7 +365,8 @@ def relevant_infos_as_csv(maps_dict):
 
     infos = maps_dict
 
-    with open(f"infos-{strftime('%Y%m%d')}.csv",'w') as csvf:
+    #with open(f"infos-{strftime('%Y%m%d')}.csv",'w') as csvf:
+    with open(f"infos-{DATETIME}.csv",'w') as csvf:
         csvf.write("Maps played\n")
         for map_name in infos.keys():
             csvf.write(f"{map_name}\n")
@@ -385,10 +387,17 @@ def relevant_infos_as_csv(maps_dict):
 
 
 def averages_as_csv(lines):
-    with open(f"av_infos-{strftime('%Y%m%d')}.csv",'w') as csvf:
-        csvf.write(f"{strftime('%d/%m/%Y')}\n")
-        csvf.write("Nb Maps Session,Type\n")
-        csvf.write(f"{lines[0][-1]},\n\n")
+    #with open(f"av_infos-{strftime('%Y%m%d')}.csv",'w') as csvf:
+    with open(f"av_infos-{DATETIME}.csv",'w') as csvf:
+        #csvf.write(f"{{strftime('%Y%m%d')}\n")
+        if DATETIME == "overall":
+            csvf.write(f"{DATETIME}\n")
+            csvf.write("Nb Maps,Type\n")
+            csvf.write(f"{lines[0][-1]},\n")
+        else:
+            csvf.write(f"{strftime('%d/%m/%Y', strptime(DATETIME,'%Y%m%d'))}\n")
+            csvf.write("Nb Maps,Type\n")
+            csvf.write(f"{lines[0][-1]},\n\n")
         #if len(lines[0]) > 12:
         #    csvf.write(CSVF_HEADER_AVERAGE)
         #else:
@@ -411,7 +420,8 @@ def get_files_in_dir(directory_in_str):
     return list_files
 
 def merge_files(cleaned_list):
-    merged_file = f"cleaned-{strftime('%Y%m%d')}.log"
+    #merged_file = f"cleaned-{strftime('%Y%m%d')}.log"
+    merged_file = f"cleaned-{DATETIME}.log"
     with open(merged_file, 'w') as outfile:
         for fname in cleaned_list:
             with open(fname) as infile:
@@ -592,10 +602,30 @@ def main():
         type=bool,
         help="Indicates that graph must be generated (files in directory must have a name like {player}-{date}. For example: dude-20200606.log)",
     )
+    parser.add_argument(
+        "-dt",
+        "--date",
+        type=str,
+        help="By default, date used is today. You can modify this with this option (must be formatted like : 20201230)",
+        default=strftime('%Y%m%d')
+    )
+    global DATETIME
 
     args = parser.parse_args() 
 
     logfile = args.logfile
+
+    if args.overall > 0:
+        DATETIME="overall"
+    else:
+        try:
+            strptime(args.date, '%Y%m%d')
+            DATETIME=args.date
+        except ValueError:
+            print("Date format not ok, defaulting to today")
+            DATETIME=strftime('%Y%m%d')
+
+    print(DATETIME)
 
     if args.directory:
         list_files = get_files_in_dir(args.directory)
