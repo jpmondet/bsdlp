@@ -69,12 +69,16 @@ def get_name_by_id(id_player):
         return ID_PLAYERS[id_player]['name']
     else:
         try:
-            infos_ssaber = requests.get(URLSS.format(id_player)).json()
+            req_infos_ssaber = requests.get(URLSS.format(id_player))
+            req_infos_ssaber.raise_for_status()
+            infos_ssaber = req_infos_ssaber.json()
             name_player = infos_ssaber['playerInfo']['name']
             ID_PLAYERS[id_player] = {}
             ID_PLAYERS[id_player]['name'] = name_player
-        except:
-            pass
+        except (requests.exceptions.ConnectionError, requests.exceptions.HTTPError):
+            # Api is certainly dead or there is an issue with connection, we fallback to id...
+            ID_PLAYERS[id_player] = {}
+            ID_PLAYERS[id_player]['name'] = id_player
         
         return name_player
      
@@ -353,7 +357,7 @@ def show_averages(averages_dict, maps_dict, overall=0):
         if nb_map_failed > 0:
             print(f"{Fore.YELLOW}                             /!\ Can be tricky to analyze since this player {Style.BRIGHT}failed some maps ({nb_map_failed}/{nb_map_session}){Style.RESET_ALL}")
         if int(pinfos['pause']) > 0:
-            print(f"                /!\ Paused {av_pauses} times !!!")
+            print(f"{Fore.RED}                             /!\ Paused {pinfos['pause']} times !{Style.RESET_ALL}")
         #if distance_rhand:
         line_in_csv.append((distance_lsaber_format,distance_rsaber_format,distance_lhand_format,distance_rhand_format,rank+1, rank_format, name, acc_format, acc_left_format, left_av_format, acc_right_format, right_av_format, av_misses, pinfos['nb_map_played'], nb_map_failed, nb_map_session))
         #else:
