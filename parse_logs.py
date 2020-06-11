@@ -7,6 +7,8 @@ from argparse import ArgumentParser
 import requests
 import json
 from colorama import Fore, Back, Style
+from matplotlib.pyplot import figure, get_cmap, style, plot, legend, title, xlabel, ylabel, grid, show, get_current_fig_manager
+
 
 URLSS = "https://new.scoresaber.com/api/player/{}/full"
 ID_PLAYERS = {}
@@ -529,30 +531,99 @@ def get_averages_on_date(maps, date, players_averages):
 
     return players_averages
 
+def get_x_y_from_maps_per_type_and_date(maps_per_type_and_date):
+
+    xy_per_type = {}
+    for type_maps in maps_per_type_and_date.keys():
+        dates_x_axis = sorted(maps_per_type_and_date[type_maps].keys())
+        players_averages = {}
+        nb_players = 0
+        for date in dates_x_axis:
+            players_averages = get_averages_on_date(maps_per_type_and_date[type_maps][date], date, players_averages) 
+
+        av_for_players_y_axis = {}
+
+        for name_p, stats in players_averages.items():
+            averages_y_for_player = []
+            for date in dates_x_axis: 
+                try:
+                    averages_y_for_player.append(stats[date]['av_acc'])
+                except KeyError:
+                    averages_y_for_player.append(None)
+                    pass
+            av_for_players_y_axis[name_p] = averages_y_for_player
+        xy_per_type[type_maps] = (dates_x_axis, av_for_players_y_axis)
+
+    return xy_per_type
+
+def plot_graph(xy_per_type):
+
+    # styles available : ['Solarize_Light2', '_classic_test_patch', 'bmh', 'classic', 'dark_background', 'fast', 'fivethirtyeight', 'ggplot', 'grayscale', 'seaborn', 'seaborn-bright', 'seaborn-colorblind', 'seaborn-dark', 'seaborn-dark-palette', 'seaborn-darkgrid', 'seaborn-deep', 'seaborn-muted', 'seaborn-notebook', 'seaborn-paper', 'seaborn-pastel', 'seaborn-poster', 'seaborn-talk', 'seaborn-ticks', 'seaborn-white', 'seaborn-whitegrid', 'tableau-colorblind10']
+    style.use('dark_background')
+    palette = get_cmap('Set1')
+
+    for type_maps in xy_per_type.keys():
+        print(f"Graph for {type_maps}\n")
+        x, all_y = xy_per_type[type_maps]
+
+        for palette_color, player in enumerate(all_y.keys()):
+            #fig = figure(palette_color)
+            plot(x, all_y[player], marker='', color=palette(palette_color), linewidth=2, alpha=0.9, label=player)
+        legend(loc='upper center', bbox_to_anchor=(0.5, 1.15),
+          ncol=4, fancybox=True, shadow=True)
+        title(type_maps, loc='left', fontsize=24, fontweight=4, color='orange')
+        xlabel("Date")
+        ylabel("Score")
+        grid()
+        mng = get_current_fig_manager()
+        mng.resize(*mng.window.maxsize())
+        #mng.window.state('zoomed')
+        #mng.frame.Maximize(True)
+        show()
+
 def graphs_averages_per_type_and_date_as_csv(maps_per_type_and_date):
+
+    xy_per_type = get_x_y_from_maps_per_type_and_date(maps_per_type_and_date)
+
 
     # OMG, what an awful algorithm.
     # Must optimize this...(maybe rethink data structure actually)
     with open("graphs_averages_per_type_and_date.csv", "w") as gaptadf:
-        for type_maps in maps_per_type_and_date.keys():
-            gaptadf.write(f"{type_maps}\n")
-            dates = sorted(maps_per_type_and_date[type_maps].keys())
-            gaptadf.write(f"Players,{','.join(dates)}\n")
-            players_averages = {}
-            nb_players = 0
-            for date in dates:
-                players_averages = get_averages_on_date(maps_per_type_and_date[type_maps][date], date, players_averages) 
+        #for type_maps in maps_per_type_and_date.keys():
+        #    gaptadf.write(f"{type_maps}\n")
+        #    dates = sorted(maps_per_type_and_date[type_maps].keys())
+        #    gaptadf.write(f"Players,{','.join(dates)}\n")
+        #    players_averages = {}
+        #    nb_players = 0
+        #    for date in dates:
+        #        players_averages = get_averages_on_date(maps_per_type_and_date[type_maps][date], date, players_averages) 
 
+        #    nb_players = len(players_averages.keys()) 
+        #    for name_p, stats in players_averages.items():
+        #        gaptadf.write(f"{name_p},")
+        #        for date in dates: 
+        #            try:
+        #                gaptadf.write(f"{stats[date]['av_acc']:.2f},")
+        #            except KeyError:
+        #                gaptadf.write(",")
+        #        gaptadf.write("\n")
+        #    gaptadf.write("\n" * (11-nb_players))
+
+        for type_maps in xy_per_type.keys():
+            dates, players_averages = xy_per_type[type_maps]
+            gaptadf.write(f"{type_maps}\n")
+            gaptadf.write(f"Players,{','.join(dates)}\n")
             nb_players = len(players_averages.keys()) 
-            for name_p, stats in players_averages.items():
-                gaptadf.write(f"{name_p},")
-                for date in dates: 
-                    try:
-                        gaptadf.write(f"{stats[date]['av_acc']:.2f},")
-                    except KeyError:
+            for player, averages in players_averages.items():
+                gaptadf.write(f"{player},")
+                for av in averages:
+                    if av:
+                        gaptadf.write(f"{av:.2f},")
+                    else:
                         gaptadf.write(",")
-                gaptadf.write("\n")
             gaptadf.write("\n" * (11-nb_players))
+
+    plot_graph(xy_per_type)
 
 
 def classify_files_of_directory_by_date(directory):
