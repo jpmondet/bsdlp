@@ -7,7 +7,7 @@ from argparse import ArgumentParser
 import requests
 import json
 from colorama import Fore, Back, Style
-from matplotlib.pyplot import figure, get_cmap, style, plot, legend, title, xlabel, ylabel, grid, show, get_current_fig_manager
+from matplotlib.pyplot import figure, get_cmap, style, plot, legend, title, xlabel, ylabel, grid, show, get_current_fig_manager, savefig
 
 
 URLSS = "https://new.scoresaber.com/api/player/{}/full"
@@ -573,8 +573,7 @@ def plot_graph(xy_per_type):
         for palette_color, player in enumerate(all_y.keys()):
             #fig = figure(palette_color)
             plot(x, all_y[player], marker='', color=palette(palette_color), linewidth=2, alpha=0.9, label=player)
-        legend(loc='upper center', bbox_to_anchor=(0.5, 1.15),
-          ncol=4, fancybox=True, shadow=True)
+        legend(loc='upper center', bbox_to_anchor=(0.5, 1.15), ncol=4, fancybox=True, shadow=True)
         title(type_maps, loc='left', fontsize=24, fontweight=4, color='orange')
         xlabel("Date")
         ylabel("Score")
@@ -584,34 +583,13 @@ def plot_graph(xy_per_type):
         #mng.window.state('zoomed')
         #mng.frame.Maximize(True)
         show()
+        #savefig(f'{type_maps}.png', orientation='landscape', papertype='a0', bbox_inches='tight')
 
-def graphs_averages_per_type_and_date_as_csv(maps_per_type_and_date):
+def graphs_averages_per_type_and_date_as_csv(maps_per_type_and_date, plot_and_show=False):
 
     xy_per_type = get_x_y_from_maps_per_type_and_date(maps_per_type_and_date)
 
-
-    # OMG, what an awful algorithm.
-    # Must optimize this...(maybe rethink data structure actually)
     with open("graphs_averages_per_type_and_date.csv", "w") as gaptadf:
-        #for type_maps in maps_per_type_and_date.keys():
-        #    gaptadf.write(f"{type_maps}\n")
-        #    dates = sorted(maps_per_type_and_date[type_maps].keys())
-        #    gaptadf.write(f"Players,{','.join(dates)}\n")
-        #    players_averages = {}
-        #    nb_players = 0
-        #    for date in dates:
-        #        players_averages = get_averages_on_date(maps_per_type_and_date[type_maps][date], date, players_averages) 
-
-        #    nb_players = len(players_averages.keys()) 
-        #    for name_p, stats in players_averages.items():
-        #        gaptadf.write(f"{name_p},")
-        #        for date in dates: 
-        #            try:
-        #                gaptadf.write(f"{stats[date]['av_acc']:.2f},")
-        #            except KeyError:
-        #                gaptadf.write(",")
-        #        gaptadf.write("\n")
-        #    gaptadf.write("\n" * (11-nb_players))
 
         for type_maps in xy_per_type.keys():
             dates, players_averages = xy_per_type[type_maps]
@@ -627,7 +605,8 @@ def graphs_averages_per_type_and_date_as_csv(maps_per_type_and_date):
                         gaptadf.write(",")
             gaptadf.write("\n" * (11-nb_players))
 
-    plot_graph(xy_per_type)
+    if plot_and_show:
+        plot_graph(xy_per_type)
 
 
 def classify_files_of_directory_by_date(directory):
@@ -675,7 +654,13 @@ def main():
         "-g",
         "--graph",
         type=bool,
-        help="Indicates that graph must be generated (files in directory must have a name like {player}-{date}. For example: dude-20200606.log)",
+        help="Indicates that graph infos (as csv) must be generated (files in directory must have a name like {player}-{date}. For example: dude-20200606.log)",
+    )
+    parser.add_argument(
+        "-w",
+        "--show",
+        type=bool,
+        help="Indicates that graph must be built & shown (pairs with --graph option)",
     )
     parser.add_argument(
         "-dt",
@@ -741,7 +726,7 @@ def main():
             map_dict, averages_dict =  retrieve_relevant_infos(infos)
             
             maps_per_type_and_date = classify_played_maps_per_type_and_date(map_dict, date, maps_per_type_and_date)
-        graphs_averages_per_type_and_date_as_csv(maps_per_type_and_date)
+        graphs_averages_per_type_and_date_as_csv(maps_per_type_and_date, args.show)
 
 if __name__ == "__main__":
     main()
