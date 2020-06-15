@@ -1,14 +1,43 @@
+""" This script computes a lot of stats from bsd logfiles.
+
+usage: BSaviorLogParser [-h] [-f LOGFILE] [-d DIRECTORY] [-o OVERALL] [-g GRAPH] [-w SHOW]
+                        [-dt DATE]
+
+Parse Beat-savior log file to get important infos
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -f LOGFILE, --logfile LOGFILE
+                        specify the logfile, default : _latest.log
+  -d DIRECTORY, --directory DIRECTORY
+                        specify the directory in which to look for logs
+  -o OVERALL, --overall OVERALL
+                        Numbers of maps over ALL sessions (this option is not useful if you need
+                        to calculate only 1 session stats)
+  -g GRAPH, --graph GRAPH
+                        Indicates that graph infos (as csv) must be generated (files in directory
+                        must have a name like {player}-{date}. For example: dude-20200606.log)
+  -w SHOW, --show SHOW  Indicates that graph must be built & shown (pairs with --graph option)
+  -dt DATE, --date DATE
+                        By default, date used is today. You can modify this with this option (must
+                        be formatted like : 20201230)
+"""
+
 #! /usr/bin/env python3
 
-from sys import exit
+# line-too-long is disabled because of csv headers & some prints
+# bad-continuation is disabled because is it handled by python-black
+# pylint: disable=line-too-long, bad-continuation
+
+from sys import exit as sexit # prevents redefining exit builtin
 from os import access, R_OK, SEEK_SET, listdir, fsencode, fsdecode
 from time import strftime, strptime
 from argparse import ArgumentParser
-import requests
 import json
-from colorama import Fore, Back, Style
+
+import requests
+from colorama import Fore, Style #Back,
 from matplotlib.pyplot import (
-    figure,
     get_cmap,
     style,
     plot,
@@ -19,7 +48,8 @@ from matplotlib.pyplot import (
     grid,
     show,
     get_current_fig_manager,
-    savefig,
+    #savefig,
+    #figure,
 )
 
 
@@ -72,7 +102,7 @@ def parse_logfile(cleaned_logfile):
             infos = json.load(logf)
         except json.decoder.JSONDecodeError as jsonerr:
             print(jsonerr)
-            exit(1)
+            sexit(1)
 
     return infos
 
@@ -83,20 +113,20 @@ def get_name_by_id(id_player):
 
     if ID_PLAYERS.get(id_player):
         return ID_PLAYERS[id_player]["name"]
-    else:
-        try:
-            req_infos_ssaber = requests.get(URLSS.format(id_player))
-            req_infos_ssaber.raise_for_status()
-            infos_ssaber = req_infos_ssaber.json()
-            name_player = infos_ssaber["playerInfo"]["name"]
-            ID_PLAYERS[id_player] = {}
-            ID_PLAYERS[id_player]["name"] = name_player
-        except (requests.exceptions.ConnectionError, requests.exceptions.HTTPError):
-            # Api is certainly dead or there is an issue with connection, we fallback to id...
-            ID_PLAYERS[id_player] = {}
-            ID_PLAYERS[id_player]["name"] = id_player
 
-        return name_player
+    try:
+        req_infos_ssaber = requests.get(URLSS.format(id_player))
+        req_infos_ssaber.raise_for_status()
+        infos_ssaber = req_infos_ssaber.json()
+        name_player = infos_ssaber["playerInfo"]["name"]
+        ID_PLAYERS[id_player] = {}
+        ID_PLAYERS[id_player]["name"] = name_player
+    except (requests.exceptions.ConnectionError, requests.exceptions.HTTPError):
+        # Api is certainly dead or there is an issue with connection, we fallback to id...
+        ID_PLAYERS[id_player] = {}
+        ID_PLAYERS[id_player]["name"] = id_player
+
+    return name_player
 
 
 def retrieve_player_infos(info_map):
@@ -330,19 +360,19 @@ def show_relevant_infos(maps_dict):
             #    print(f"     {rank + 1} -  {pinfos['id']:20} with {pinfos['acc']:5}   (left: {pinfos['accLeft']:6} [{pinfos['leftAv']:>18}], right: {pinfos['accRight']:6} [{pinfos['rightAv']:>18}], {pinfos['miss']} miss)")
             if int(pinfos["pause"]) > 0:
                 print(
-                    f"                {Fore.RED}/!\ Paused {pinfos['pause']} times !!!{Style.RESET_ALL}"
+                    f"                {Fore.RED}/!\\ Paused {pinfos['pause']} times !!!{Style.RESET_ALL}"
                 )
             if not pinfos["map_passed"]:
                 print(
-                    f"                {Fore.RED}/!\ Map failed at {pinfos['failed_time']:.2f} seconds{Style.RESET_ALL}"
+                    f"                {Fore.RED}/!\\ Map failed at {pinfos['failed_time']:.2f} seconds{Style.RESET_ALL}"
                 )
         print()
 
 
 def get_average_ranking(player_ranking_dict, nb_map_played):
-    played_all = True
+    #played_all = True
     rank_sum = 0
-    for map_name, ranks in player_ranking_dict.items():
+    for _, ranks in player_ranking_dict.items():
         rank_sum += sum(ranks)
     return rank_sum / nb_map_played
 
@@ -371,7 +401,8 @@ def show_averages(averages_dict, maps_dict, overall=0):
         av_rank = get_average_ranking(
             players_ranking_dict[name], pinfos["nb_map_played"]
         )
-        played_all = True if pinfos["nb_map_played"] == nb_map_session else False
+        #played_all = True if pinfos["nb_map_played"] == nb_map_session else False
+        played_all = pinfos["nb_map_played"] == nb_map_session
 
         av_acc = pinfos["acc"] / pinfos["nb_map_played"]
         av_acc_left = pinfos["accLeft"] / pinfos["nb_map_played"]
@@ -429,15 +460,15 @@ def show_averages(averages_dict, maps_dict, overall=0):
         #    print(f"{rank+1} - {Style.DIM}(AvRank:{rank_format}){Style.RESET_ALL} - {Style.BRIGHT}{name:20}{Style.RESET_ALL} with {acc_format:5}   (left: {acc_left_format:6} [{left_av_format:>18}], right: {acc_right_format:6} [{right_av_format:>18}], {av_misses:.2f} miss)")
         if not played_all:
             print(
-                f"{Fore.RED}                             /!\ Can be tricky to analyze since this player {Style.BRIGHT}didn't play all maps ({pinfos['nb_map_played']}/{nb_map_session}){Style.RESET_ALL}"
+                f"{Fore.RED}                             /!\\ Can be tricky to analyze since this player {Style.BRIGHT}didn't play all maps ({pinfos['nb_map_played']}/{nb_map_session}){Style.RESET_ALL}"
             )
         if nb_map_failed > 0:
             print(
-                f"{Fore.YELLOW}                             /!\ Can be tricky to analyze since this player {Style.BRIGHT}failed some maps ({nb_map_failed}/{nb_map_session}){Style.RESET_ALL}"
+                f"{Fore.YELLOW}                             /!\\ Can be tricky to analyze since this player {Style.BRIGHT}failed some maps ({nb_map_failed}/{nb_map_session}){Style.RESET_ALL}"
             )
         if int(pinfos["pause"]) > 0:
             print(
-                f"{Fore.RED}                             /!\ Paused {pinfos['pause']} times !{Style.RESET_ALL}"
+                f"{Fore.RED}                             /!\\ Paused {pinfos['pause']} times !{Style.RESET_ALL}"
             )
         # if distance_rhand:
         line_in_csv.append(
@@ -660,7 +691,7 @@ def update_averages_for_map(infos_players, players_averages):
 
 def get_averages_on_date(maps, date, players_averages):
     for map_played in maps:
-        map_name, infos_players = map_played.popitem()
+        _, infos_players = map_played.popitem()
         players_averages = update_averages_for_map(infos_players, players_averages)
 
     for name_p, stats in players_averages.items():
@@ -677,7 +708,7 @@ def get_x_y_from_maps_per_type_and_date(maps_per_type_and_date):
     for type_maps in maps_per_type_and_date.keys():
         dates_x_axis = sorted(maps_per_type_and_date[type_maps].keys())
         players_averages = {}
-        nb_players = 0
+        #nb_players = 0
         for date in dates_x_axis:
             players_averages = get_averages_on_date(
                 maps_per_type_and_date[type_maps][date], date, players_averages
@@ -692,7 +723,6 @@ def get_x_y_from_maps_per_type_and_date(maps_per_type_and_date):
                     averages_y_for_player.append(stats[date]["av_acc"])
                 except KeyError:
                     averages_y_for_player.append(None)
-                    pass
             av_for_players_y_axis[name_p] = averages_y_for_player
         xy_per_type[type_maps] = (dates_x_axis, av_for_players_y_axis)
 
@@ -707,12 +737,12 @@ def plot_graph(xy_per_type):
 
     for type_maps in xy_per_type.keys():
         print(f"Graph for {type_maps}\n")
-        x, all_y = xy_per_type[type_maps]
+        x_axis, all_y = xy_per_type[type_maps]
 
         for palette_color, player in enumerate(all_y.keys()):
             # fig = figure(palette_color)
             plot(
-                x,
+                x_axis,
                 all_y[player],
                 marker="",
                 color=palette(palette_color),
@@ -747,16 +777,17 @@ def graphs_averages_per_type_and_date_as_csv(
 
     with open("graphs_averages_per_type_and_date.csv", "w") as gaptadf:
 
-        for type_maps in xy_per_type.keys():
+        #for type_maps in xy_per_type.keys():
+        for type_maps in xy_per_type:
             dates, players_averages = xy_per_type[type_maps]
             gaptadf.write(f"{type_maps}\n")
             gaptadf.write(f"Players,{','.join(dates)}\n")
             nb_players = len(players_averages.keys())
             for player, averages in players_averages.items():
                 gaptadf.write(f"{player},")
-                for av in averages:
-                    if av:
-                        gaptadf.write(f"{av:.2f},")
+                for average in averages:
+                    if average:
+                        gaptadf.write(f"{average:.2f},")
                     else:
                         gaptadf.write(",")
             gaptadf.write("\n" * (11 - nb_players))
@@ -826,7 +857,7 @@ def main():
         help="By default, date used is today. You can modify this with this option (must be formatted like : 20201230)",
         default=strftime("%Y%m%d"),
     )
-    global DATETIME
+    global DATETIME # pylint: disable=global-statement
 
     args = parser.parse_args()
 
@@ -851,7 +882,7 @@ def main():
     else:
         if not access(args.logfile, R_OK):
             print("Please provide a correct file path")
-            exit(1)
+            sexit(1)
 
     cleaned_logfile = clean_logfile(logfile)
     infos = parse_logfile(cleaned_logfile)
