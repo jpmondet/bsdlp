@@ -118,7 +118,7 @@ def get_name_by_id(id_player):
         req_infos_ssaber = requests.get(URLSS.format(id_player))
         req_infos_ssaber.raise_for_status()
         infos_ssaber = req_infos_ssaber.json()
-        name_player = infos_ssaber["playerInfo"]["name"]
+        name_player = infos_ssaber["playerInfo"]["playerName"]
         ID_PLAYERS[id_player] = {}
         ID_PLAYERS[id_player]["name"] = name_player
     except (requests.exceptions.ConnectionError, requests.exceptions.HTTPError):
@@ -790,6 +790,7 @@ def graphs_averages_per_type_and_date_as_csv(
                         gaptadf.write(f"{average:.2f},")
                     else:
                         gaptadf.write(",")
+                gaptadf.write("\n")
             gaptadf.write("\n" * (11 - nb_players))
 
     if plot_and_show:
