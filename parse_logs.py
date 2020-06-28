@@ -150,6 +150,68 @@ def retrieve_player_infos(info_map):
         f"{name} - time played: {ID_PLAYERS[id_player]['time_played']} - fc count : {ID_PLAYERS[id_player]['fc']}"
     )
 
+def handle_notes_values(list_notes, map_name, player_name):
+    """
+    list of :
+{
+  "noteType": 0,
+  "line": 3,
+  "column": 0,
+  "id": 0,
+  "time": 1.4122833,
+  "before": 70,
+  "accuracy": 0,
+  "after": 30,
+  "timeDeviation": 0.04133582,
+  "saberSpeed": 22.2724133,
+  "cutDirDeviation": 0.164031982,
+  "cutDistanceToCenter": 0.4768337
+},
+    """
+    sorted_notes = sorted(
+        list_notes, key=lambda kv: kv["id"]
+    )
+    
+    x_axis = []
+    y_axis = []
+    for note in sorted_notes:
+        x_axis.append(note["id"])
+        acc_note = int(note["before"]) + int(note["accuracy"]) + int(note["after"])
+        y_axis.append(acc_note)
+
+    style.use("dark_background")
+    palette = get_cmap("Set1")
+
+
+    # fig = figure(palette_color)
+    plot(
+        x_axis,
+        y_axis,
+        marker="",
+        color=palette(0),
+        linewidth=2,
+        alpha=0.9,
+        label=player_name,
+    )
+    legend(
+        loc="upper center",
+        bbox_to_anchor=(0.5, 1.15),
+        ncol=4,
+        fancybox=True,
+        shadow=True,
+    )
+    title(f"{map_name}", loc="left", fontsize=24, fontweight=4, color="orange")
+    xlabel("Note Number")
+    ylabel("Acc per note")
+    grid()
+    mng = get_current_fig_manager()
+    mng.resize(*mng.window.maxsize())
+    # mng.window.state('zoomed')
+    # mng.frame.Maximize(True)
+    show()
+
+
+
 
 def retrieve_relevant_infos(infos):
 
@@ -161,7 +223,6 @@ def retrieve_relevant_infos(infos):
         if info_map.get("saberAColor"):
             retrieve_player_infos(info_map)
             continue
-
         # Retrieving all relevant infos into variables
         name = get_name_by_id(info_map["playerID"])
         score = info_map["trackers"]["scoreTracker"]["score"]
@@ -189,6 +250,10 @@ def retrieve_relevant_infos(infos):
         if "," in info_map["songMapper"]:
             info_map["songMapper"] = info_map["songMapper"].split(",")[0]
         map_name = f"{info_map['songName']} {info_map['songArtist']} {info_map['songDifficulty']} by {info_map['songMapper']}"
+
+        if info_map["trackers"].get("noteTracker"):
+            handle_notes_values(info_map["trackers"]["noteTracker"]["notes"], map_name, name)
+
         try:
             # If BSD version supports distanceTracker
             distance_rsaber = float(
