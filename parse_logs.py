@@ -167,50 +167,100 @@ def handle_notes_values(list_notes, map_name, player_name):
   "cutDirDeviation": 0.164031982,
   "cutDistanceToCenter": 0.4768337
 },
+
+v2 : 
+{
+  "noteType": 0,           <- left/right
+  "noteDirection": 7,      <- rotation ? 
+                            -> Enum : 
+                                0 = up
+                                1 = down
+                                2 = left
+                                3 = right
+                                4 = upleft
+                                5 = upright
+                                6 = downleft
+                                7 = downright
+                                8 = Any
+                                9 = None
+  "index": 3,              <- placement (0 to 12 from bottom left to up right)
+  "id": 0,                 <- noteOrder
+  "time": 3.42305875,      <- time at which it appears
+  "score": [               <- preswing/precision/postswing
+    70,
+    12,
+    30
+  ],
+  "timeDeviation": 0.0356202126,  <- time at which it was hit
+  "cutPoint": [                   <- x,y,z, where is 0 ?
+    0.960040569,
+    0.8226648,
+    1.36074
+  ],
+  "saberDir": [
+    0.06795776,
+    -0.224361658,
+    0.06975007
+  ]
+},
     """
     sorted_notes = sorted(
         list_notes, key=lambda kv: kv["id"]
     )
     
-    x_axis = []
-    y_axis = []
+    x_note_time = []
+    y_acc = []
+    y_preswing = []
+    y_precision = []
+    y_postswing = []
+    y_time_deviation = []
     for note in sorted_notes:
-        x_axis.append(note["id"])
-        acc_note = int(note["before"]) + int(note["accuracy"]) + int(note["after"])
-        y_axis.append(acc_note)
+        x_note_time.append(note["time"])
+        acc_note = int(note["score"][0]) + int(note["score"][1]) + int(note["score"][2])
+        y_acc.append(acc_note)
+        y_preswing.append(note["score"][0])
+        y_precision.append(note["score"][1])
+        y_postswing.append(note["score"][2])
+        y_time_deviation.append(float(note["timeDeviation"]) * 1000 )  # in milliseconds
+
+    all_y = { 
+            "Acc": y_acc, 
+            "Preswing": y_preswing,
+            "TimeDeviation": y_time_deviation,
+            "Precision": y_precision,
+            "Postswing": y_postswing,
+    }
 
     style.use("dark_background")
     palette = get_cmap("Set1")
+    color = 0
+    for y_name, y_vals in all_y.items():
+        linewidth = 1 if y_name == "TimeDeviation" else 2
+        plot(
+            x_note_time,
+            y_vals,
+            marker="",
+            color=palette(color),
+            linewidth=linewidth,
+            alpha=0.9,
+            label=y_name,
+        )
+        color += 1
 
-
-    # fig = figure(palette_color)
-    plot(
-        x_axis,
-        y_axis,
-        marker="",
-        color=palette(0),
-        linewidth=2,
-        alpha=0.9,
-        label=player_name,
-    )
     legend(
         loc="upper center",
         bbox_to_anchor=(0.5, 1.15),
-        ncol=4,
+        ncol=5,
         fancybox=True,
         shadow=True,
     )
-    title(f"{map_name}", loc="left", fontsize=24, fontweight=4, color="orange")
-    xlabel("Note Number")
-    ylabel("Acc per note")
+    title(f"|{player_name}| ({map_name})", loc="left", fontsize=14, fontweight=4, color="White")
+    xlabel("Time")
+    ylabel("Points & millisecs")
     grid()
     mng = get_current_fig_manager()
     mng.resize(*mng.window.maxsize())
-    # mng.window.state('zoomed')
-    # mng.frame.Maximize(True)
     show()
-
-
 
 
 def retrieve_relevant_infos(infos):
@@ -251,8 +301,8 @@ def retrieve_relevant_infos(infos):
             info_map["songMapper"] = info_map["songMapper"].split(",")[0]
         map_name = f"{info_map['songName']} {info_map['songArtist']} {info_map['songDifficulty']} by {info_map['songMapper']}"
 
-        if info_map["trackers"].get("noteTracker"):
-            handle_notes_values(info_map["trackers"]["noteTracker"]["notes"], map_name, name)
+        if info_map.get("deepTrackers"):
+            handle_notes_values(info_map["deepTrackers"]["noteTracker"]["notes"], map_name, name)
 
         try:
             # If BSD version supports distanceTracker
