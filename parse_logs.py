@@ -84,6 +84,8 @@ def clean_logfile(logfile):
                 continue
             if line_cleaned.startswith("}"):
                 line_cleaned = "},\n"
+            if line_cleaned.endswith("}}\n"):
+                line_cleaned += ",\n"
             cleaned_logfile.write(line_cleaned)
 
     cleaned_logfile.seek(cleaned_logfile.tell() - 2, SEEK_SET)
@@ -168,11 +170,11 @@ def handle_notes_values(list_notes, map_name, player_name):
   "cutDistanceToCenter": 0.4768337
 },
 
-v2 : 
+v2 :
 {
   "noteType": 0,           <- left/right
-  "noteDirection": 7,      <- rotation ? 
-                            -> Enum : 
+  "noteDirection": 7,      <- rotation ?
+                            -> Enum :
                                 0 = up
                                 1 = down
                                 2 = left
@@ -203,11 +205,18 @@ v2 :
     0.06975007
   ]
 },
+
+v3:
+
+{"noteType":0,"noteDirection":1,"index":1,"id":31,"time":3.38983059,"cutType":0,"multiplier":1,"score":[70,11,30],"timeDeviation":0.0441668034,"cutPoint":[0.226540029,0.813864648,1.58848751],"saberDir":[-0.00422650576,-0.298254728,0.005454302]}
+
+    cutType -> enum (0 = cut, 1 = miss, 2 = badcut)
+    multiplier -> allows to see when a wall is hit
+
     """
     sorted_notes = sorted(
         list_notes, key=lambda kv: kv["id"]
     )
-    
     x_note_time = []
     y_acc = []
     y_preswing = []
@@ -221,10 +230,10 @@ v2 :
         y_preswing.append(note["score"][0])
         y_precision.append(note["score"][1])
         y_postswing.append(note["score"][2])
-        y_time_deviation.append(float(note["timeDeviation"]) * 1000 )  # in milliseconds
+        y_time_deviation.append(float(note["timeDeviation"]) * 1000)  # in milliseconds
 
-    all_y = { 
-            "Acc": y_acc, 
+    all_y = {
+            "Acc": y_acc,
             "Preswing": y_preswing,
             "TimeDeviation": y_time_deviation,
             "Precision": y_precision,
