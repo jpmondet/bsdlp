@@ -213,6 +213,7 @@ v3:
     cutType -> enum (0 = cut, 1 = miss, 2 = badcut)
     multiplier -> allows to see when a wall is hit
 
+
     """
     sorted_notes = sorted(
         list_notes, key=lambda kv: kv["id"]
@@ -273,6 +274,15 @@ v3:
 
 
 def retrieve_relevant_infos(infos):
+    """
+    New enum : SongDataType {
+                0: none
+                1: pass
+                2: fail
+                3: practice
+                4: replay
+                }
+    """
 
     map_dict = {}  # stores player infos per map
     averages_dict = {}  # stores averages per player
