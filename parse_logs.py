@@ -218,34 +218,61 @@ v3:
     sorted_notes = sorted(
         list_notes, key=lambda kv: kv["id"]
     )
-    x_note_time = []
-    y_acc = []
-    y_preswing = []
-    y_precision = []
-    y_postswing = []
-    y_time_deviation = []
+    x_left_note_time = []
+    y_left_acc = []
+    y_left_preswing = []
+    y_left_precision = []
+    y_left_postswing = []
+    y_left_time_deviation = []
+    x_right_note_time = []
+    y_right_acc = []
+    y_right_preswing = []
+    y_right_precision = []
+    y_right_postswing = []
+    y_right_time_deviation = []
     for note in sorted_notes:
-        x_note_time.append(note["time"])
         acc_note = int(note["score"][0]) + int(note["score"][1]) + int(note["score"][2])
-        y_acc.append(acc_note)
-        y_preswing.append(note["score"][0])
-        y_precision.append(note["score"][1])
-        y_postswing.append(note["score"][2])
-        y_time_deviation.append(float(note["timeDeviation"]) * 1000)  # in milliseconds
+        if note["noteType"] == 0:
+            x_left_note_time.append(note["time"])
+            y_left_acc.append(acc_note)
+            y_left_preswing.append(note["score"][0])
+            y_left_precision.append(note["score"][1])
+            y_left_postswing.append(note["score"][2])
+            y_left_time_deviation.append(float(note["timeDeviation"]) * 1000)  # in milliseconds
+        elif note["noteType"] == 1:
+            x_right_note_time.append(note["time"])
+            y_right_acc.append(acc_note)
+            y_right_preswing.append(note["score"][0])
+            y_right_precision.append(note["score"][1])
+            y_right_postswing.append(note["score"][2])
+            y_right_time_deviation.append(float(note["timeDeviation"]) * 1000)  # in milliseconds
+        else:
+            print(note["noteType"])
+
+    all_x = {
+        "Left notes timing": x_left_note_time,
+        "Right notes timing": x_right_note_time,
+    }
 
     all_y = {
-            "Acc": y_acc,
-            "Preswing": y_preswing,
-            "TimeDeviation": y_time_deviation,
-            "Precision": y_precision,
-            "Postswing": y_postswing,
+            "Acc (left)":        y_left_acc,
+            "Preswing (left)":   y_left_preswing,
+            "Hit timing (left)": y_left_time_deviation,
+            "Precision (left)":  y_left_precision,
+            "Postswing (left)":  y_left_postswing,
+            "Acc (right)":        y_right_acc,
+            "Preswing (right)":   y_right_preswing,
+            "Hit timing (right)": y_right_time_deviation,
+            "Precision (right)":  y_right_precision,
+            "Postswing (right)":  y_right_postswing,
     }
 
     style.use("dark_background")
     palette = get_cmap("Set1")
     color = 0
     for y_name, y_vals in all_y.items():
-        linewidth = 1 if y_name == "TimeDeviation" else 2
+        x_note_time = all_x["Left notes timing"] if "left" in y_name else all_x["Right notes timing"]
+        linewidth = 1 if "Hit timing" in y_name else 2
         plot(
             x_note_time,
             y_vals,
@@ -265,8 +292,8 @@ v3:
         shadow=True,
     )
     title(f"|{player_name}| ({map_name})", loc="left", fontsize=14, fontweight=4, color="White")
-    xlabel("Time")
-    ylabel("Points & millisecs")
+    xlabel("Time (seconds)")
+    ylabel("Score (points) & hit timing (millisecs)")
     grid()
     mng = get_current_fig_manager()
     mng.resize(*mng.window.maxsize())
