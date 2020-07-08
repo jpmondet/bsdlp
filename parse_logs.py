@@ -230,16 +230,28 @@ v3:
     y_right_precision = []
     y_right_postswing = []
     y_right_time_deviation = []
+    #print(map_name)
+    #print(len(sorted_notes))
     for note in sorted_notes:
-        acc_note = int(note["score"][0]) + int(note["score"][1]) + int(note["score"][2])
+        try:
+            acc_note = int(note["score"][0]) + int(note["score"][1]) + int(note["score"][2])
+        except:
+            print(note)
+            continue
         if note["noteType"] == 0:
             x_left_note_time.append(note["time"])
             y_left_acc.append(acc_note)
             y_left_preswing.append(note["score"][0])
+            #if note["score"][0] < 70:
+            #    print("left")
+            #    print("pre: " + str(note["score"][0]))
             y_left_precision.append(note["score"][1])
             y_left_postswing.append(note["score"][2])
             y_left_time_deviation.append(float(note["timeDeviation"]) * 1000)  # in milliseconds
         elif note["noteType"] == 1:
+            #if note["score"][0] < 70:
+            #    print("right")
+            #    print("pre: " + str(note["score"][0]))
             x_right_note_time.append(note["time"])
             y_right_acc.append(acc_note)
             y_right_preswing.append(note["score"][0])
@@ -297,7 +309,7 @@ v3:
     grid()
     mng = get_current_fig_manager()
     mng.resize(*mng.window.maxsize())
-    show()
+    #show()
 
 
 def retrieve_relevant_infos(infos):
@@ -369,6 +381,18 @@ def retrieve_relevant_infos(infos):
             distance_rhand = 0.0
             nb_with_distance = 0
 
+        try:
+            # If BSD version supports swing speed 
+            left_speed = float(info_map["trackers"]["accuracyTracker"]["leftSpeed"])
+            right_speed = float(info_map["trackers"]["accuracyTracker"]["rightSpeed"])
+            nb_with_speed = 1
+        except:
+            left_speed = 0.0
+            right_speed = 0.0
+            nb_with_speed = 0
+
+
+
         if MAPS_PLAYED.get(map_name):
             if name in MAPS_PLAYED[map_name]["players"]:
                 MAPS_PLAYED[map_name]["count"] += 1
@@ -399,6 +423,12 @@ def retrieve_relevant_infos(infos):
         distance_rhand_format = (
             "{:.2f}".format(distance_lhand) if distance_lhand else ""
         )
+        left_speed_format = (
+            "{:.2f}".format(left_speed) if left_speed else ""
+        )
+        right_speed_format = (
+            "{:.2f}".format(right_speed) if right_speed else ""
+        )
         player_infos = {
             "id": name,
             "score": score,
@@ -415,6 +445,8 @@ def retrieve_relevant_infos(infos):
             "distance_lsaber": distance_lsaber_format,
             "distance_rhand": distance_rhand_format,
             "distance_lhand": distance_lhand_format,
+            "left_speed": left_speed_format,
+            "right_speed": right_speed_format,
         }
         try:
             map_dict[map_name].append(player_infos)
@@ -450,6 +482,11 @@ def retrieve_relevant_infos(infos):
                 averages_dict[name]["distance_rhand"] += distance_rhand
                 averages_dict[name]["distance_lhand"] += distance_lhand
                 averages_dict[name]["nb_with_distance"] += 1
+            if left_speed:
+                averages_dict[name]["left_speed"] += left_speed
+                averages_dict[name]["right_speed"] += right_speed
+                averages_dict[name]["nb_with_speed"] += 1
+
         except KeyError:
             if map_passed:
                 list_map_passed = [map_name]
@@ -481,6 +518,9 @@ def retrieve_relevant_infos(infos):
                 "distance_rhand": distance_rhand,
                 "distance_lhand": distance_lhand,
                 "nb_with_distance": nb_with_distance,
+                "left_speed": left_speed,
+                "right_speed": right_speed,
+                "nb_with_speed": nb_with_speed,
             }
             averages_dict[name] = averages_infos
     return map_dict, averages_dict
@@ -515,7 +555,7 @@ def show_relevant_infos(maps_dict):
         for rank, pinfos in enumerate(sorted_pinfos):
             # if pinfos['distance_rsaber']:
             print(
-                f"     {rank + 1} -  {pinfos['id']:28} with {pinfos['acc']:5}   (left: {pinfos['accLeft']:6} [{pinfos['leftAv']:>18}]{Style.DIM}{Fore.BLUE}[{pinfos['distance_lsaber']:>8},{pinfos['distance_lhand']:>8}]{Style.RESET_ALL}, right: {pinfos['accRight']:6} [{pinfos['rightAv']:>18}]{Style.DIM}{Fore.BLUE}[{pinfos['distance_rsaber']:>8},{pinfos['distance_rhand']:>8}]{Style.RESET_ALL}, {pinfos['miss']} miss)"
+                f"     {rank + 1} -  {pinfos['id']:28} with {pinfos['acc']:5}   (left: {pinfos['accLeft']:6} [{pinfos['leftAv']:>18}]{Style.DIM}{Fore.BLUE}[{pinfos['distance_lsaber']:>8},{pinfos['distance_lhand']:>8}]{Style.RESET_ALL}{Style.DIM}{Fore.YELLOW}[{pinfos['left_speed']:>5}]{Style.RESET_ALL}, right: {pinfos['accRight']:6} [{pinfos['rightAv']:>18}]{Style.DIM}{Fore.BLUE}[{pinfos['distance_rsaber']:>8},{pinfos['distance_rhand']:>8}]{Style.RESET_ALL}{Style.DIM}{Fore.YELLOW}[{pinfos['right_speed']:>5}]{Style.RESET_ALL}, {pinfos['miss']} miss)"
             )
             # else:
             #    print(f"     {rank + 1} -  {pinfos['id']:20} with {pinfos['acc']:5}   (left: {pinfos['accLeft']:6} [{pinfos['leftAv']:>18}], right: {pinfos['accRight']:6} [{pinfos['rightAv']:>18}], {pinfos['miss']} miss)")
@@ -590,6 +630,13 @@ def show_averages(averages_dict, maps_dict, overall=0):
             distance_lsaber = 0
             distance_rhand = 0
             distance_lhand = 0
+        if pinfos["nb_with_speed"]:
+            av_left_speed = pinfos["left_speed"] / pinfos["nb_with_speed"]
+            av_right_speed = pinfos["right_speed"] / pinfos["nb_with_speed"]
+        else:
+            av_left_speed = 0
+            av_right_speed = 0
+        
 
         rank_format = "{:.2f}".format(av_rank)
         acc_format = "{:.2f}".format(av_acc)
@@ -613,9 +660,15 @@ def show_averages(averages_dict, maps_dict, overall=0):
         distance_lhand_format = (
             "{:.2f}".format(distance_lhand) if distance_lhand else ""
         )
+        av_left_speed_format = (
+            "{:.2f}".format(av_left_speed) if av_left_speed else ""
+        )
+        av_right_speed_format = (
+            "{:.2f}".format(av_right_speed) if av_right_speed else ""
+        )
         # if distance_rhand:
         print(
-            f"{rank+1} - {Style.DIM}(AvRank:{rank_format}){Style.RESET_ALL} - {Style.BRIGHT}{name:28}{Style.RESET_ALL} with {acc_format:5}   (left: {acc_left_format:6} [{left_av_format:>18}]{Style.DIM}{Fore.BLUE}[{distance_lsaber_format:>8},{distance_lhand_format:>8}]{Style.RESET_ALL}, right: {acc_right_format:6} [{right_av_format:>18}]{Style.DIM}{Fore.BLUE}[{distance_rsaber_format:>8},{distance_rhand_format:>8}]{Style.RESET_ALL}, {av_misses:.2f} miss)"
+            f"{rank+1} - {Style.DIM}(AvRank:{rank_format}){Style.RESET_ALL} - {Style.BRIGHT}{name:28}{Style.RESET_ALL} with {acc_format:5}   (left: {acc_left_format:6} [{left_av_format:>18}]{Style.DIM}{Fore.BLUE}[{distance_lsaber_format:>8},{distance_lhand_format:>8}]{Style.RESET_ALL}{Style.DIM}{Fore.YELLOW}[{av_left_speed_format:>5}]{Style.RESET_ALL}, right: {acc_right_format:6} [{right_av_format:>18}]{Style.DIM}{Fore.BLUE}[{distance_rsaber_format:>8},{distance_rhand_format:>8}]{Style.RESET_ALL}{Style.DIM}{Fore.YELLOW}[{av_right_speed_format:>5}]{Style.RESET_ALL}, {av_misses:.2f} miss)"
         )
         # else:
         #    print(f"{rank+1} - {Style.DIM}(AvRank:{rank_format}){Style.RESET_ALL} - {Style.BRIGHT}{name:20}{Style.RESET_ALL} with {acc_format:5}   (left: {acc_left_format:6} [{left_av_format:>18}], right: {acc_right_format:6} [{right_av_format:>18}], {av_misses:.2f} miss)")
@@ -650,6 +703,8 @@ def show_averages(averages_dict, maps_dict, overall=0):
                 pinfos["nb_map_played"],
                 nb_map_failed,
                 nb_map_session,
+                #av_left_speed_format,
+                #av_rightt_speed_format,
             )
         )
         # else:
