@@ -152,7 +152,7 @@ def retrieve_player_infos(info_map):
         f"{name} - time played: {ID_PLAYERS[id_player]['time_played']} - fc count : {ID_PLAYERS[id_player]['fc']}"
     )
 
-def handle_notes_values(list_notes, map_name, player_name):
+def handle_notes_values(list_notes, map_name, player_name, left_av_tuple, right_av_tuple):
     """
     list of :
 {
@@ -261,6 +261,23 @@ v3:
         else:
             print(note["noteType"])
 
+    
+    # Simple test to identify a sneaky bug (av swing is sometimes not equal to the actual av of the swing on each note)
+    calc_left_preswing = sum(y_left_preswing) / len(y_left_preswing)
+    if calc_left_preswing != left_av_tuple[0]:
+        print("Ooops ? ", calc_left_preswing, left_av_tuple[0])
+    calc_right_preswing = sum(y_right_preswing) / len(y_right_preswing)
+    if calc_right_preswing != right_av_tuple[0]:
+        print("Ooops ? ", calc_right_preswing, right_av_tuple[0])
+    calc_left_postswing = sum(y_left_postswing) / len(y_left_postswing)
+    if calc_left_postswing != left_av_tuple[2]:
+        print("Ooops ? ", calc_left_postswing, left_av_tuple[2])
+    calc_right_postswing = sum(y_right_postswing) / len(y_right_postswing)
+    if calc_right_postswing != right_av_tuple[2]:
+        print("Ooops ? ", calc_right_postswing, right_av_tuple[2])
+
+
+
     all_x = {
         "Left notes timing": x_left_note_time,
         "Right notes timing": x_right_note_time,
@@ -360,7 +377,7 @@ def retrieve_relevant_infos(infos):
         map_name = f"{info_map['songName']} {info_map['songArtist']} {info_map['songDifficulty']} by {info_map['songMapper']}"
 
         if info_map.get("deepTrackers"):
-            handle_notes_values(info_map["deepTrackers"]["noteTracker"]["notes"], map_name, name)
+            handle_notes_values(info_map["deepTrackers"]["noteTracker"]["notes"], map_name, name, left_av_tuple, right_av_tuple)
 
         try:
             # If BSD version supports distanceTracker
@@ -1074,6 +1091,25 @@ def main():
         help="By default, date used is today. You can modify this with this option (must be formatted like : 20201230)",
         default=strftime("%Y%m%d"),
     )
+    parser.add_argument(
+        "-dp",
+        "--deeptrackers",
+        type=bool,
+        help="With this option, deep trackers will be tacken in account & graphs per map/player will be showed",
+    )
+    parser.add_argument(
+        "-dps",
+        "--deeptrackerstoshow",
+        type=str,
+        help="By default, we try to show all we have. This option allows to select only some trackers (for example : 'preswing,postswing')",
+        default="all",
+    )
+    parser.add_argument(
+        "-ma",
+        "--mapanalysis",
+        type=str,
+        help="If --deep-trackers option is used, it is possible to specify a map so that multiple runs of this map will be showed on the same graph",  
+    )
     global DATETIME # pylint: disable=global-statement
 
     args = parser.parse_args()
@@ -1112,6 +1148,12 @@ def main():
     # print(json.dumps(averages_dict, indent=2))
     # show_relevant_infos(averages_dict)
     show_averages(averages_dict, map_dict, args.overall)
+
+    if args.deeptrackers:
+        handle_notes_values(list_notes, map_name, player_name, left_av_tuple, right_av_tuple)
+
+
+
 
     if args.graph and args.directory:
         # Prepare maps infos with difficulty and stuff
