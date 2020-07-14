@@ -152,7 +152,142 @@ def retrieve_player_infos(info_map):
         f"{name} - time played: {ID_PLAYERS[id_player]['time_played']} - fc count : {ID_PLAYERS[id_player]['fc']}"
     )
 
-def handle_notes_values(list_notes, map_name, player_name, left_av_tuple, right_av_tuple):
+
+def show_map(all_x, all_y, player_name, map_name):
+    style.use("dark_background")
+    palette = get_cmap("Set1")
+    color = 0
+    for y_name, y_vals in all_y.items():
+        x_note_time = all_x["Left notes timing"] if "left" in y_name else all_x["Right notes timing"]
+        linewidth = 1 if "Hit timing" in y_name else 2
+        plot(
+            x_note_time,
+            y_vals,
+            marker="",
+            color=palette(color),
+            linewidth=linewidth,
+            alpha=0.9,
+            label=y_name,
+        )
+        color += 1
+
+    legend(
+        loc="upper center",
+        bbox_to_anchor=(0.5, 1.15),
+        ncol=5,
+        fancybox=True,
+        shadow=True,
+    )
+    title(f"|{player_name}| ({map_name})", loc="left", fontsize=14, fontweight=4, color="White")
+    xlabel("Time (seconds)")
+    ylabel("Score (points) & hit timing (millisecs)")
+    grid()
+    mng = get_current_fig_manager()
+    mng.resize(*mng.window.maxsize())
+    show()
+
+def get_run_as_coord(list_notes, sub_deeptrackers):
+    sorted_notes = sorted(
+        list_notes, key=lambda kv: kv["id"]
+    )
+    x_left_note_time = []
+    y_left_acc = []
+    y_left_preswing = []
+    y_left_precision = []
+    y_left_postswing = []
+    y_left_time_deviation = []
+    x_right_note_time = []
+    y_right_acc = []
+    y_right_preswing = []
+    y_right_precision = []
+    y_right_postswing = []
+    y_right_time_deviation = []
+    for note in sorted_notes:
+        try:
+            acc_note = int(note["score"][0]) + int(note["score"][1]) + int(note["score"][2])
+        except:
+            print(note)
+            continue
+        if note["noteType"] == 0:
+            x_left_note_time.append(note["time"])
+            y_left_acc.append(acc_note)
+            y_left_preswing.append(note["score"][0])
+            y_left_precision.append(note["score"][1])
+            y_left_postswing.append(note["score"][2])
+            y_left_time_deviation.append(float(note["timeDeviation"]) * 1000)  # in milliseconds
+        elif note["noteType"] == 1:
+            x_right_note_time.append(note["time"])
+            y_right_acc.append(acc_note)
+            y_right_preswing.append(note["score"][0])
+            y_right_precision.append(note["score"][1])
+            y_right_postswing.append(note["score"][2])
+            y_right_time_deviation.append(float(note["timeDeviation"]) * 1000)  # in milliseconds
+        else:
+            print(note["noteType"])
+
+
+    all_x = {
+        "Left notes timing": x_left_note_time,
+        "Right notes timing": x_right_note_time,
+    }
+    all_y = {
+            "Acc (left)":        y_left_acc,
+            "Preswing (left)":   y_left_preswing,
+            "Hit timing (left)": y_left_time_deviation,
+            "Precision (left)":  y_left_precision,
+            "Postswing (left)":  y_left_postswing,
+            "Acc (right)":        y_right_acc,
+            "Preswing (right)":   y_right_preswing,
+            "Hit timing (right)": y_right_time_deviation,
+            "Precision (right)":  y_right_precision,
+            "Postswing (right)":  y_right_postswing,
+    }
+
+    if sub_deeptrackers:
+        subdp = sub_deeptrackers.split(",")
+        y_sub = all_y.copy()
+
+        for y in y_sub.keys():
+            #if subdp.lower() not in y.lower():
+            found = False
+            for sub in subdp:
+                if sub.lower() in y.lower():
+                    found = True
+            if not found:    
+                del(all_y[y])
+    
+    return all_x, all_y
+
+def show_multiple_runs_map(map_name, players_runs, sub_deeptrackers):
+    
+    all_x = {}
+    all_y = {}
+    player_run = 1
+
+    for player_name in players_runs:
+        for list_notes in players_runs[player_name]:
+            all_x, player_y = get_run_as_coord(list_notes, sub_deeptrackers)
+            for y_name, y_list in player_y.items():
+                all_y[f"{y_name} {player_name} {str(player_run)}"] = y_list
+            player_run += 1
+        player_run = 1
+    show_map(all_x, all_y, player_name, map_name)
+
+
+
+
+def handle_notes_values(notes_dict, sub_deeptrackers, maps_to_analyze):
+    """
+        notes_dict looks like : 
+        {
+            map_name : 
+                player_name : 
+                    [
+                        [notes_map_1],
+                        [notes_map_2]
+                    ]
+        }
+    """
     """
     list of :
 {
@@ -215,118 +350,28 @@ v3:
 
 
     """
-    sorted_notes = sorted(
-        list_notes, key=lambda kv: kv["id"]
-    )
-    x_left_note_time = []
-    y_left_acc = []
-    y_left_preswing = []
-    y_left_precision = []
-    y_left_postswing = []
-    y_left_time_deviation = []
-    x_right_note_time = []
-    y_right_acc = []
-    y_right_preswing = []
-    y_right_precision = []
-    y_right_postswing = []
-    y_right_time_deviation = []
-    #print(map_name)
-    #print(len(sorted_notes))
-    for note in sorted_notes:
-        try:
-            acc_note = int(note["score"][0]) + int(note["score"][1]) + int(note["score"][2])
-        except:
-            print(note)
-            continue
-        if note["noteType"] == 0:
-            x_left_note_time.append(note["time"])
-            y_left_acc.append(acc_note)
-            y_left_preswing.append(note["score"][0])
-            #if note["score"][0] < 70:
-            #    print("left")
-            #    print("pre: " + str(note["score"][0]))
-            y_left_precision.append(note["score"][1])
-            y_left_postswing.append(note["score"][2])
-            y_left_time_deviation.append(float(note["timeDeviation"]) * 1000)  # in milliseconds
-        elif note["noteType"] == 1:
-            #if note["score"][0] < 70:
-            #    print("right")
-            #    print("pre: " + str(note["score"][0]))
-            x_right_note_time.append(note["time"])
-            y_right_acc.append(acc_note)
-            y_right_preswing.append(note["score"][0])
-            y_right_precision.append(note["score"][1])
-            y_right_postswing.append(note["score"][2])
-            y_right_time_deviation.append(float(note["timeDeviation"]) * 1000)  # in milliseconds
-        else:
-            print(note["noteType"])
 
-    
-    # Simple test to identify a sneaky bug (av swing is sometimes not equal to the actual av of the swing on each note)
-    calc_left_preswing = sum(y_left_preswing) / len(y_left_preswing)
-    if calc_left_preswing != left_av_tuple[0]:
-        print("Ooops ? ", calc_left_preswing, left_av_tuple[0])
-    calc_right_preswing = sum(y_right_preswing) / len(y_right_preswing)
-    if calc_right_preswing != right_av_tuple[0]:
-        print("Ooops ? ", calc_right_preswing, right_av_tuple[0])
-    calc_left_postswing = sum(y_left_postswing) / len(y_left_postswing)
-    if calc_left_postswing != left_av_tuple[2]:
-        print("Ooops ? ", calc_left_postswing, left_av_tuple[2])
-    calc_right_postswing = sum(y_right_postswing) / len(y_right_postswing)
-    if calc_right_postswing != right_av_tuple[2]:
-        print("Ooops ? ", calc_right_postswing, right_av_tuple[2])
+    if maps_to_analyze:
+        maps_to_analyze_list = maps_to_analyze.split(",")
+        notes_dict_strip = notes_dict.copy()
 
+        for map_name in notes_dict_strip.keys():
+            found = False
+            for map_to_analyze in maps_to_analyze_list:
+                if map_to_analyze.lower() in map_name.lower():
+                    found = True
+            if not found:    
+                del(notes_dict[map_name])
+        
+        for map_name, players_runs in notes_dict.items():
+            show_multiple_runs_map(map_name, players_runs, sub_deeptrackers)
 
-
-    all_x = {
-        "Left notes timing": x_left_note_time,
-        "Right notes timing": x_right_note_time,
-    }
-
-    all_y = {
-            "Acc (left)":        y_left_acc,
-            "Preswing (left)":   y_left_preswing,
-            "Hit timing (left)": y_left_time_deviation,
-            "Precision (left)":  y_left_precision,
-            "Postswing (left)":  y_left_postswing,
-            "Acc (right)":        y_right_acc,
-            "Preswing (right)":   y_right_preswing,
-            "Hit timing (right)": y_right_time_deviation,
-            "Precision (right)":  y_right_precision,
-            "Postswing (right)":  y_right_postswing,
-    }
-
-    style.use("dark_background")
-    palette = get_cmap("Set1")
-    color = 0
-    for y_name, y_vals in all_y.items():
-        x_note_time = all_x["Left notes timing"] if "left" in y_name else all_x["Right notes timing"]
-        linewidth = 1 if "Hit timing" in y_name else 2
-        plot(
-            x_note_time,
-            y_vals,
-            marker="",
-            color=palette(color),
-            linewidth=linewidth,
-            alpha=0.9,
-            label=y_name,
-        )
-        color += 1
-
-    legend(
-        loc="upper center",
-        bbox_to_anchor=(0.5, 1.15),
-        ncol=5,
-        fancybox=True,
-        shadow=True,
-    )
-    title(f"|{player_name}| ({map_name})", loc="left", fontsize=14, fontweight=4, color="White")
-    xlabel("Time (seconds)")
-    ylabel("Score (points) & hit timing (millisecs)")
-    grid()
-    mng = get_current_fig_manager()
-    mng.resize(*mng.window.maxsize())
-    #show()
+    else:
+        for map_name, player_runs in notes_dict.items():
+            for player_name in player_runs:
+                for list_notes in player_runs[player_name]:
+                    all_x, all_y = get_run_as_coord(list_notes, sub_deeptrackers)
+                    show_map(all_x, all_y, player_name, map_name)
 
 
 def retrieve_relevant_infos(infos):
@@ -342,6 +387,7 @@ def retrieve_relevant_infos(infos):
 
     map_dict = {}  # stores player infos per map
     averages_dict = {}  # stores averages per player
+    notes_dict = {}
 
     for info_map in infos:
 
@@ -377,7 +423,13 @@ def retrieve_relevant_infos(infos):
         map_name = f"{info_map['songName']} {info_map['songArtist']} {info_map['songDifficulty']} by {info_map['songMapper']}"
 
         if info_map.get("deepTrackers"):
-            handle_notes_values(info_map["deepTrackers"]["noteTracker"]["notes"], map_name, name, left_av_tuple, right_av_tuple)
+            if notes_dict.get(map_name):
+                try:
+                    notes_dict[map_name][name].append(info_map["deepTrackers"]["noteTracker"]["notes"])
+                except KeyError:
+                    notes_dict[map_name][name] = [info_map["deepTrackers"]["noteTracker"]["notes"]]
+            else:
+                    notes_dict[map_name] = { name: [info_map["deepTrackers"]["noteTracker"]["notes"]] }
 
         try:
             # If BSD version supports distanceTracker
@@ -540,7 +592,7 @@ def retrieve_relevant_infos(infos):
                 "nb_with_speed": nb_with_speed,
             }
             averages_dict[name] = averages_infos
-    return map_dict, averages_dict
+    return map_dict, averages_dict, notes_dict
 
 
 def get_ranking_per_map(maps_dict):
@@ -1101,14 +1153,14 @@ def main():
         "-dps",
         "--deeptrackerstoshow",
         type=str,
-        help="By default, we try to show all we have. This option allows to select only some trackers (for example : 'preswing,postswing')",
+        help="By default, we try to show all we have. This option allows to select only some sub-deeptrackers (for example : 'preswing,postswing')",
         default="all",
     )
     parser.add_argument(
         "-ma",
         "--mapanalysis",
         type=str,
-        help="If --deep-trackers option is used, it is possible to specify a map so that multiple runs of this map will be showed on the same graph",  
+        help="If --deep-trackers option is used, it is possible to specify a map so that multiple runs of this map will be showed on the same graph (will only show the maps specified though)",  
     )
     global DATETIME # pylint: disable=global-statement
 
@@ -1140,7 +1192,7 @@ def main():
     cleaned_logfile = clean_logfile(logfile)
     infos = parse_logfile(cleaned_logfile)
 
-    map_dict, averages_dict = retrieve_relevant_infos(infos)
+    map_dict, averages_dict, notes_dict = retrieve_relevant_infos(infos)
     show_relevant_infos(map_dict)
     relevant_infos_as_csv(map_dict)
 
@@ -1150,7 +1202,7 @@ def main():
     show_averages(averages_dict, map_dict, args.overall)
 
     if args.deeptrackers:
-        handle_notes_values(list_notes, map_name, player_name, left_av_tuple, right_av_tuple)
+        handle_notes_values(notes_dict, args.deeptrackerstoshow, args.mapanalysis)
 
 
 
