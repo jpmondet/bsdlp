@@ -258,7 +258,7 @@ def get_run_as_coord(list_notes, sub_deeptrackers):
     
     return all_x, all_y
 
-def show_multiple_runs_map(map_name, players_runs, sub_deeptrackers):
+def show_multiple_runs_map(map_name, players_runs, sub_deeptrackers, averaged=False):
     
     all_x = {}
     all_y = {}
@@ -268,15 +268,34 @@ def show_multiple_runs_map(map_name, players_runs, sub_deeptrackers):
         for list_notes in players_runs[player_name]:
             all_x, player_y = get_run_as_coord(list_notes, sub_deeptrackers)
             for y_name, y_list in player_y.items():
-                all_y[f"{y_name} {player_name} {str(player_run)}"] = y_list
+                all_y[f"{y_name}_{player_name}_{str(player_run)}"] = y_list
             player_run += 1
         player_run = 1
-    show_map(all_x, all_y, player_name, map_name)
+    
+    if not averaged:
+        show_map(all_x, all_y, player_name, map_name)
+    else:
+        import statistics
+        sort_all_y = {}
+        for name, y in all_y.items():
+            y_name, player_name, player_run = name.split('_')
+            try:
+                sort_all_y[y_name].append(y)
+            except KeyError:
+                sort_all_y[y_name] = [y]
+
+        av_all_y = {}
+        for name, y in sort_all_y.items():
+            print(y[-1])
+            av_y = [statistics.mean(k) for k in zip(*y)]
+            print(av_y[-1])
+            av_all_y[name] = av_y
+        show_map(all_x, av_all_y, player_name, map_name)
 
 
 
 
-def handle_notes_values(notes_dict, sub_deeptrackers, maps_to_analyze):
+def handle_notes_values(notes_dict, sub_deeptrackers, maps_to_analyze, averaged=False):
     """
         notes_dict looks like : 
         {
@@ -364,7 +383,7 @@ v3:
                 del(notes_dict[map_name])
         
         for map_name, players_runs in notes_dict.items():
-            show_multiple_runs_map(map_name, players_runs, sub_deeptrackers)
+            show_multiple_runs_map(map_name, players_runs, sub_deeptrackers, averaged)
 
     else:
         for map_name, player_runs in notes_dict.items():
@@ -1162,6 +1181,12 @@ def main():
         type=str,
         help="If --deep-trackers option is used, it is possible to specify a map so that multiple runs of this map will be showed on the same graph (will only show the maps specified though)",  
     )
+    parser.add_argument(
+        "-av",
+        "--averagedMA",
+        type=bool,
+        help="If --mapanalysis option is used, it is possible to average the multiple runs into one",  
+    )
     global DATETIME # pylint: disable=global-statement
 
     args = parser.parse_args()
@@ -1202,10 +1227,7 @@ def main():
     show_averages(averages_dict, map_dict, args.overall)
 
     if args.deeptrackers:
-        handle_notes_values(notes_dict, args.deeptrackerstoshow, args.mapanalysis)
-
-
-
+        handle_notes_values(notes_dict, args.deeptrackerstoshow, args.mapanalysis, args.averagedMA)
 
     if args.graph and args.directory:
         # Prepare maps infos with difficulty and stuff
