@@ -889,13 +889,23 @@ def get_files_in_dir(directory_in_str):
     return list_files
 
 
-def merge_files(cleaned_list):
+def merge_files(cleaned_list, name_template="cleaned-{DATETIME}.log", cleaned=False):
     # merged_file = f"cleaned-{strftime('%Y%m%d')}.log"
-    merged_file = f"cleaned-{DATETIME}.log"
+    merged_file = f"{name_template}"
     with open(merged_file, "w") as outfile:
+        if cleaned:
+            outfile.write('[')
         for fname in cleaned_list:
             with open(fname) as infile:
                 outfile.write(infile.read())
+                if cleaned:
+                    outfile.write(',')
+
+    if cleaned:
+        outfile = open(merged_file,'w+')
+        outfile.seek(outfile.tell() - 2, SEEK_SET)
+        outfile.write("]")
+        outfile.close()
 
     return merged_file
 
@@ -1131,6 +1141,18 @@ def main():
         default="_latest.log",
     )
     parser.add_argument(
+        "-c",
+        "--cleaned",
+        type=bool,
+        help="If this flag is set, we consider that files are already clean jsons",
+    )
+    parser.add_argument(
+        "-tple",
+        "--template",
+        type=str,
+        help="This flag goes with 'cleaned' if you want to indicate the name format of the files already cleaned",
+    )
+    parser.add_argument(
         "-d",
         "--directory",
         type=str,
@@ -1207,14 +1229,17 @@ def main():
 
     if args.directory:
         list_files = get_files_in_dir(args.directory)
-        logfile = merge_files(list_files)
+        logfile = merge_files(list_files, cleaned=args.cleaned)
 
     else:
         if not access(args.logfile, R_OK):
             print("Please provide a correct file path")
             sexit(1)
 
-    cleaned_logfile = clean_logfile(logfile)
+    if args.cleaned:
+        cleaned_logfile = logfile
+    else:
+        cleaned_logfile = clean_logfile(logfile)
     infos = parse_logfile(cleaned_logfile)
 
     map_dict, averages_dict, notes_dict = retrieve_relevant_infos(infos)
