@@ -889,9 +889,9 @@ def get_files_in_dir(directory_in_str):
     return list_files
 
 
-def merge_files(cleaned_list, name_template="cleaned-{DATETIME}.log", cleaned=False):
+def merge_files(cleaned_list, name_template="cleaned-{}.log", cleaned=False):
     # merged_file = f"cleaned-{strftime('%Y%m%d')}.log"
-    merged_file = f"{name_template}"
+    merged_file = name_template.format(DATETIME)
     with open(merged_file, "w") as outfile:
         if cleaned:
             outfile.write('[')
@@ -902,10 +902,12 @@ def merge_files(cleaned_list, name_template="cleaned-{DATETIME}.log", cleaned=Fa
                     outfile.write(',')
 
     if cleaned:
-        outfile = open(merged_file,'w+')
-        outfile.seek(outfile.tell() - 2, SEEK_SET)
-        outfile.write("]")
-        outfile.close()
+        all_file = ""
+        with open(merged_file,'r') as mfile:
+            all_file = mfile.read()
+        all_file = all_file[:-1] + ']'
+        with open(merged_file,'w') as mfile:
+            mfile.write(all_file)
 
     return merged_file
 
@@ -1225,7 +1227,7 @@ def main():
             print("Date format not ok, defaulting to today")
             DATETIME = strftime("%Y%m%d")
 
-    print(DATETIME)
+    #print(DATETIME)
 
     if args.directory:
         list_files = get_files_in_dir(args.directory)
