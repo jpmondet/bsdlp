@@ -631,11 +631,18 @@ def get_ranking_per_map(maps_dict):
     return player_ranking_dict
 
 
-def show_relevant_infos(maps_dict):
+def show_relevant_infos(maps_dict, no_color=False):
 
     infos = maps_dict
 
     for map_name in infos.keys():
+        if no_color:
+            Style.BRIGHT=""
+            Style.RESET_ALL=""
+            Style.DIM = ""
+            Fore.YELLOW = ""
+            Fore.BLUE = ""
+            Fore.RED = ""
         print(f"{Style.BRIGHT}{map_name}{Style.RESET_ALL}")
         sorted_pinfos = sorted(
             infos[map_name], key=lambda kv: kv["score"], reverse=True
@@ -666,7 +673,7 @@ def get_average_ranking(player_ranking_dict, nb_map_played):
     return rank_sum / nb_map_played
 
 
-def show_averages(averages_dict, maps_dict, overall=0):
+def show_averages(averages_dict, maps_dict, overall=0, no_color=False):
     players_ranking_dict = get_ranking_per_map(maps_dict)
     infos = averages_dict
 
@@ -1211,6 +1218,13 @@ def main():
         type=bool,
         help="If --mapanalysis option is used, it is possible to average the multiple runs into one",  
     )
+    parser.add_argument(
+        "-nc",
+        "--nocolor",
+        type=bool,
+        help="By default, output is colorize. You can disable it with this flag",
+        default=False,
+    )
     global DATETIME # pylint: disable=global-statement
 
     args = parser.parse_args()
@@ -1245,13 +1259,13 @@ def main():
     infos = parse_logfile(cleaned_logfile)
 
     map_dict, averages_dict, notes_dict = retrieve_relevant_infos(infos)
-    show_relevant_infos(map_dict)
+    show_relevant_infos(map_dict, args.nocolor)
     relevant_infos_as_csv(map_dict)
 
     # print(json.dumps(map_dict, indent=2))
     # print(json.dumps(averages_dict, indent=2))
     # show_relevant_infos(averages_dict)
-    show_averages(averages_dict, map_dict, args.overall)
+    show_averages(averages_dict, map_dict, args.overall, args.nocolor)
 
     if args.deeptrackers:
         handle_notes_values(notes_dict, args.deeptrackerstoshow, args.mapanalysis, args.averagedMA)
