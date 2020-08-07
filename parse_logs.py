@@ -148,9 +148,10 @@ def retrieve_player_infos(info_map):
     ID_PLAYERS[id_player]["hand_dist"] = info_map["handDistanceTravelled"]
     ID_PLAYERS[id_player]["time_played"] = info_map["timePlayed"] / 3600
 
-    print(
-        f"{name} - time played: {ID_PLAYERS[id_player]['time_played']} - fc count : {ID_PLAYERS[id_player]['fc']}"
-    )
+    if str(id_player) != "76561197964179685":
+        print(
+            f"{name} - time played: {ID_PLAYERS[id_player]['time_played']} - fc count : {ID_PLAYERS[id_player]['fc']}"
+        )
 
 
 def show_map(all_x, all_y, player_name, map_name):
@@ -637,12 +638,12 @@ def show_relevant_infos(maps_dict, no_color=False):
 
     for map_name in infos.keys():
         if no_color:
-            Style.BRIGHT=""
-            Style.RESET_ALL=""
-            Style.DIM = ""
-            Fore.YELLOW = ""
-            Fore.BLUE = ""
-            Fore.RED = ""
+            Style.BRIGHT="**"
+            Style.RESET_ALL="**"
+            Style.DIM = " "
+            Fore.YELLOW = "**"
+            Fore.BLUE = "**"
+            Fore.RED = "**"
         print(f"{Style.BRIGHT}{map_name}{Style.RESET_ALL}")
         sorted_pinfos = sorted(
             infos[map_name], key=lambda kv: kv["score"], reverse=True
