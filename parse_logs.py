@@ -409,6 +409,9 @@ def retrieve_relevant_infos(infos):
     averages_dict = {}  # stores averages per player
     notes_dict = {}
 
+    if isinstance(infos, dict):
+        infos = [infos]
+
     for info_map in infos:
 
         if info_map.get("saberAColor"):
