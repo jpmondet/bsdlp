@@ -1289,7 +1289,7 @@ def main():
             logfile = merge_files(files)
             cleaned_logfile = clean_logfile(logfile)
             infos = parse_logfile(cleaned_logfile)
-            map_dict, averages_dict = retrieve_relevant_infos(infos)
+            map_dict, averages_dict, notes_dict = retrieve_relevant_infos(infos)
 
             maps_per_type_and_date = classify_played_maps_per_type_and_date(
                 map_dict, date, maps_per_type_and_date
