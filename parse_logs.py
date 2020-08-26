@@ -394,7 +394,7 @@ v3:
                     show_map(all_x, all_y, player_name, map_name)
 
 
-def retrieve_relevant_infos(infos):
+def retrieve_relevant_infos(infos, restrict_to_maps):
     """
     New enum : SongDataType {
                 0: none
@@ -404,6 +404,11 @@ def retrieve_relevant_infos(infos):
                 4: replay
                 }
     """
+
+    if restrict_to_maps:
+        restrict_to_maps = restrict_to_maps.split('::')
+    #else:
+    #    restrict_to_maps = 
 
     map_dict = {}  # stores player infos per map
     averages_dict = {}  # stores averages per player
@@ -417,6 +422,15 @@ def retrieve_relevant_infos(infos):
         if info_map.get("saberAColor"):
             retrieve_player_infos(info_map)
             continue
+
+        if "," in info_map["songMapper"]:
+            info_map["songMapper"] = info_map["songMapper"].split(",")[0]
+        map_name = f"{info_map['songName']} {info_map['songArtist']} {info_map['songDifficulty']} by {info_map['songMapper']}"
+
+        if restrict_to_maps:
+            if not any(substring.lower() in map_name.lower() for substring in restrict_to_maps):
+                continue
+
         # Retrieving all relevant infos into variables
         name = get_name_by_id(info_map["playerID"])
         score = info_map["trackers"]["scoreTracker"]["score"]
@@ -441,9 +455,6 @@ def retrieve_relevant_infos(infos):
         except KeyError:
             left_av_tuple = (0.0, 0.0, 0.0)
             right_av_tuple = (0.0, 0.0, 0.0)
-        if "," in info_map["songMapper"]:
-            info_map["songMapper"] = info_map["songMapper"].split(",")[0]
-        map_name = f"{info_map['songName']} {info_map['songArtist']} {info_map['songDifficulty']} by {info_map['songMapper']}"
 
         if info_map.get("deepTrackers"):
             if notes_dict.get(map_name):
@@ -1172,6 +1183,12 @@ def main():
         help="specify the directory in which to look for logs",
     )
     parser.add_argument(
+        "-r",
+        "--restrictmap",
+        type=str,
+        help="Restrict parsing to specific maps separated by double colons (name doesn't need to be exact. It will be greedy tho). For example 'map1' or 'map1::map2'.",
+    )
+    parser.add_argument(
         "-o",
         "--overall",
         type=int,
@@ -1262,7 +1279,7 @@ def main():
         cleaned_logfile = clean_logfile(logfile)
     infos = parse_logfile(cleaned_logfile)
 
-    map_dict, averages_dict, notes_dict = retrieve_relevant_infos(infos)
+    map_dict, averages_dict, notes_dict = retrieve_relevant_infos(infos, args.restrictmap)
     show_relevant_infos(map_dict, args.nocolor)
     relevant_infos_as_csv(map_dict)
 
@@ -1289,7 +1306,7 @@ def main():
             logfile = merge_files(files)
             cleaned_logfile = clean_logfile(logfile)
             infos = parse_logfile(cleaned_logfile)
-            map_dict, averages_dict, notes_dict = retrieve_relevant_infos(infos)
+            map_dict, averages_dict, notes_dict = retrieve_relevant_infos(infos, args.restrictmap)
 
             maps_per_type_and_date = classify_played_maps_per_type_and_date(
                 map_dict, date, maps_per_type_and_date
