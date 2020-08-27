@@ -1280,6 +1280,9 @@ def main():
     infos = parse_logfile(cleaned_logfile)
 
     map_dict, averages_dict, notes_dict = retrieve_relevant_infos(infos, args.restrictmap)
+    if not map_dict:
+        print("No maps found")
+        return
     show_relevant_infos(map_dict, args.nocolor)
     relevant_infos_as_csv(map_dict)
 
