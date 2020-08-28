@@ -29,14 +29,14 @@ optional arguments:
 # bad-continuation is disabled because is it handled by python-black
 # pylint: disable=line-too-long, bad-continuation
 
-from sys import exit as sexit # prevents redefining exit builtin
+from sys import exit as sexit  # prevents redefining exit builtin
 from os import access, R_OK, SEEK_SET, listdir, fsencode, fsdecode
 from time import strftime, strptime
 from argparse import ArgumentParser
 import json
 
 import requests
-from colorama import Fore, Style #Back,
+from colorama import Fore, Style  # Back,
 from matplotlib.pyplot import (
     get_cmap,
     style,
@@ -48,8 +48,8 @@ from matplotlib.pyplot import (
     grid,
     show,
     get_current_fig_manager,
-    #savefig,
-    #figure,
+    # savefig,
+    # figure,
 )
 
 
@@ -159,7 +159,9 @@ def show_map(all_x, all_y, player_name, map_name):
     palette = get_cmap("Set1")
     color = 0
     for y_name, y_vals in all_y.items():
-        x_note_time = all_x["Left notes timing"] if "left" in y_name else all_x["Right notes timing"]
+        x_note_time = (
+            all_x["Left notes timing"] if "left" in y_name else all_x["Right notes timing"]
+        )
         linewidth = 1 if "Hit timing" in y_name else 2
         plot(
             x_note_time,
@@ -173,11 +175,7 @@ def show_map(all_x, all_y, player_name, map_name):
         color += 1
 
     legend(
-        loc="upper center",
-        bbox_to_anchor=(0.5, 1.15),
-        ncol=5,
-        fancybox=True,
-        shadow=True,
+        loc="upper center", bbox_to_anchor=(0.5, 1.15), ncol=5, fancybox=True, shadow=True,
     )
     title(f"|{player_name}| ({map_name})", loc="left", fontsize=14, fontweight=4, color="White")
     xlabel("Time (seconds)")
@@ -187,10 +185,9 @@ def show_map(all_x, all_y, player_name, map_name):
     mng.resize(*mng.window.maxsize())
     show()
 
+
 def get_run_as_coord(list_notes, sub_deeptrackers):
-    sorted_notes = sorted(
-        list_notes, key=lambda kv: kv["id"]
-    )
+    sorted_notes = sorted(list_notes, key=lambda kv: kv["id"])
     x_left_note_time = []
     y_left_acc = []
     y_left_preswing = []
@@ -226,22 +223,21 @@ def get_run_as_coord(list_notes, sub_deeptrackers):
         else:
             print(note["noteType"])
 
-
     all_x = {
         "Left notes timing": x_left_note_time,
         "Right notes timing": x_right_note_time,
     }
     all_y = {
-            "Acc (left)":        y_left_acc,
-            "Preswing (left)":   y_left_preswing,
-            "Hit timing (left)": y_left_time_deviation,
-            "Precision (left)":  y_left_precision,
-            "Postswing (left)":  y_left_postswing,
-            "Acc (right)":        y_right_acc,
-            "Preswing (right)":   y_right_preswing,
-            "Hit timing (right)": y_right_time_deviation,
-            "Precision (right)":  y_right_precision,
-            "Postswing (right)":  y_right_postswing,
+        "Acc (left)": y_left_acc,
+        "Preswing (left)": y_left_preswing,
+        "Hit timing (left)": y_left_time_deviation,
+        "Precision (left)": y_left_precision,
+        "Postswing (left)": y_left_postswing,
+        "Acc (right)": y_right_acc,
+        "Preswing (right)": y_right_preswing,
+        "Hit timing (right)": y_right_time_deviation,
+        "Precision (right)": y_right_precision,
+        "Postswing (right)": y_right_postswing,
     }
 
     if sub_deeptrackers:
@@ -249,18 +245,19 @@ def get_run_as_coord(list_notes, sub_deeptrackers):
         y_sub = all_y.copy()
 
         for y in y_sub.keys():
-            #if subdp.lower() not in y.lower():
+            # if subdp.lower() not in y.lower():
             found = False
             for sub in subdp:
                 if sub.lower() in y.lower():
                     found = True
-            if not found:    
-                del(all_y[y])
-    
+            if not found:
+                del all_y[y]
+
     return all_x, all_y
 
+
 def show_multiple_runs_map(map_name, players_runs, sub_deeptrackers, averaged=False):
-    
+
     all_x = {}
     all_y = {}
     player_run = 1
@@ -272,14 +269,15 @@ def show_multiple_runs_map(map_name, players_runs, sub_deeptrackers, averaged=Fa
                 all_y[f"{y_name}_{player_name}_{str(player_run)}"] = y_list
             player_run += 1
         player_run = 1
-    
+
     if not averaged:
         show_map(all_x, all_y, player_name, map_name)
     else:
         import statistics
+
         sort_all_y = {}
         for name, y in all_y.items():
-            y_name, player_name, player_run = name.split('_')
+            y_name, player_name, player_run = name.split("_")
             try:
                 sort_all_y[y_name].append(y)
             except KeyError:
@@ -292,8 +290,6 @@ def show_multiple_runs_map(map_name, players_runs, sub_deeptrackers, averaged=Fa
             print(av_y[-1])
             av_all_y[name] = av_y
         show_map(all_x, av_all_y, player_name, map_name)
-
-
 
 
 def handle_notes_values(notes_dict, sub_deeptrackers, maps_to_analyze, averaged=False):
@@ -380,9 +376,9 @@ v3:
             for map_to_analyze in maps_to_analyze_list:
                 if map_to_analyze.lower() in map_name.lower():
                     found = True
-            if not found:    
-                del(notes_dict[map_name])
-        
+            if not found:
+                del notes_dict[map_name]
+
         for map_name, players_runs in notes_dict.items():
             show_multiple_runs_map(map_name, players_runs, sub_deeptrackers, averaged)
 
@@ -406,9 +402,9 @@ def retrieve_relevant_infos(infos, restrict_to_maps):
     """
 
     if restrict_to_maps:
-        restrict_to_maps = restrict_to_maps.split('::')
-    #else:
-    #    restrict_to_maps = 
+        restrict_to_maps = restrict_to_maps.split("::")
+    # else:
+    #    restrict_to_maps =
 
     map_dict = {}  # stores player infos per map
     averages_dict = {}  # stores averages per player
@@ -459,20 +455,18 @@ def retrieve_relevant_infos(infos, restrict_to_maps):
         if info_map.get("deepTrackers"):
             if notes_dict.get(map_name):
                 try:
-                    notes_dict[map_name][name].append(info_map["deepTrackers"]["noteTracker"]["notes"])
+                    notes_dict[map_name][name].append(
+                        info_map["deepTrackers"]["noteTracker"]["notes"]
+                    )
                 except KeyError:
                     notes_dict[map_name][name] = [info_map["deepTrackers"]["noteTracker"]["notes"]]
             else:
-                    notes_dict[map_name] = { name: [info_map["deepTrackers"]["noteTracker"]["notes"]] }
+                notes_dict[map_name] = {name: [info_map["deepTrackers"]["noteTracker"]["notes"]]}
 
         try:
             # If BSD version supports distanceTracker
-            distance_rsaber = float(
-                info_map["trackers"]["distanceTracker"]["rightSaber"]
-            )
-            distance_lsaber = float(
-                info_map["trackers"]["distanceTracker"]["leftSaber"]
-            )
+            distance_rsaber = float(info_map["trackers"]["distanceTracker"]["rightSaber"])
+            distance_lsaber = float(info_map["trackers"]["distanceTracker"]["leftSaber"])
             distance_lhand = float(info_map["trackers"]["distanceTracker"]["leftHand"])
             distance_rhand = float(info_map["trackers"]["distanceTracker"]["rightHand"])
             nb_with_distance = 1
@@ -485,7 +479,7 @@ def retrieve_relevant_infos(infos, restrict_to_maps):
             nb_with_distance = 0
 
         try:
-            # If BSD version supports swing speed 
+            # If BSD version supports swing speed
             left_speed = float(info_map["trackers"]["accuracyTracker"]["leftSpeed"])
             right_speed = float(info_map["trackers"]["accuracyTracker"]["rightSpeed"])
             nb_with_speed = 1
@@ -493,8 +487,6 @@ def retrieve_relevant_infos(infos, restrict_to_maps):
             left_speed = 0.0
             right_speed = 0.0
             nb_with_speed = 0
-
-
 
         if MAPS_PLAYED.get(map_name):
             if name in MAPS_PLAYED[map_name]["players"]:
@@ -514,24 +506,12 @@ def retrieve_relevant_infos(infos, restrict_to_maps):
         right_av_format = "{:05.2f}, {:05.2f}, {:05.2f}".format(
             right_av_tuple[0], right_av_tuple[1], right_av_tuple[2]
         )
-        distance_rsaber_format = (
-            "{:.2f}".format(distance_rsaber) if distance_rsaber else ""
-        )
-        distance_lsaber_format = (
-            "{:.2f}".format(distance_lsaber) if distance_lsaber else ""
-        )
-        distance_lhand_format = (
-            "{:.2f}".format(distance_rhand) if distance_rhand else ""
-        )
-        distance_rhand_format = (
-            "{:.2f}".format(distance_lhand) if distance_lhand else ""
-        )
-        left_speed_format = (
-            "{:.2f}".format(left_speed) if left_speed else ""
-        )
-        right_speed_format = (
-            "{:.2f}".format(right_speed) if right_speed else ""
-        )
+        distance_rsaber_format = "{:.2f}".format(distance_rsaber) if distance_rsaber else ""
+        distance_lsaber_format = "{:.2f}".format(distance_lsaber) if distance_lsaber else ""
+        distance_lhand_format = "{:.2f}".format(distance_rhand) if distance_rhand else ""
+        distance_rhand_format = "{:.2f}".format(distance_lhand) if distance_lhand else ""
+        left_speed_format = "{:.2f}".format(left_speed) if left_speed else ""
+        right_speed_format = "{:.2f}".format(right_speed) if right_speed else ""
         player_infos = {
             "id": name,
             "score": score,
@@ -570,9 +550,7 @@ def retrieve_relevant_infos(infos, restrict_to_maps):
             averages_dict[name]["accRight"] += acc_right
             prev_left_av_tuple = averages_dict[name]["leftAv"]
             prev_right_av_tuple = averages_dict[name]["rightAv"]
-            averages_dict[name]["leftAv"] = tuple(
-                map(sum, zip(prev_left_av_tuple, left_av_tuple))
-            )
+            averages_dict[name]["leftAv"] = tuple(map(sum, zip(prev_left_av_tuple, left_av_tuple)))
             averages_dict[name]["rightAv"] = tuple(
                 map(sum, zip(prev_right_av_tuple, right_av_tuple))
             )
@@ -632,9 +610,7 @@ def retrieve_relevant_infos(infos, restrict_to_maps):
 def get_ranking_per_map(maps_dict):
     player_ranking_dict = {}
     for map_name in maps_dict.keys():
-        sorted_pinfos = sorted(
-            maps_dict[map_name], key=lambda kv: kv["score"], reverse=True
-        )
+        sorted_pinfos = sorted(maps_dict[map_name], key=lambda kv: kv["score"], reverse=True)
         for rank, pinfos in enumerate(sorted_pinfos):
             try:
                 if player_ranking_dict[pinfos["id"]].get(map_name):
@@ -652,16 +628,14 @@ def show_relevant_infos(maps_dict, no_color=False):
 
     for map_name in infos.keys():
         if no_color:
-            Style.BRIGHT="**"
-            Style.RESET_ALL="**"
+            Style.BRIGHT = "**"
+            Style.RESET_ALL = "**"
             Style.DIM = " "
             Fore.YELLOW = "**"
             Fore.BLUE = "**"
             Fore.RED = "**"
         print(f"{Style.BRIGHT}{map_name}{Style.RESET_ALL}")
-        sorted_pinfos = sorted(
-            infos[map_name], key=lambda kv: kv["score"], reverse=True
-        )
+        sorted_pinfos = sorted(infos[map_name], key=lambda kv: kv["score"], reverse=True)
         for rank, pinfos in enumerate(sorted_pinfos):
             # if pinfos['distance_rsaber']:
             print(
@@ -681,7 +655,7 @@ def show_relevant_infos(maps_dict, no_color=False):
 
 
 def get_average_ranking(player_ranking_dict, nb_map_played):
-    #played_all = True
+    # played_all = True
     rank_sum = 0
     for _, ranks in player_ranking_dict.items():
         rank_sum += sum(ranks)
@@ -709,10 +683,8 @@ def show_averages(averages_dict, maps_dict, overall=0, no_color=False):
     for rank, averages in enumerate(sorted_pinfos):
         name, pinfos = averages
 
-        av_rank = get_average_ranking(
-            players_ranking_dict[name], pinfos["nb_map_played"]
-        )
-        #played_all = True if pinfos["nb_map_played"] == nb_map_session else False
+        av_rank = get_average_ranking(players_ranking_dict[name], pinfos["nb_map_played"])
+        # played_all = True if pinfos["nb_map_played"] == nb_map_session else False
         played_all = pinfos["nb_map_played"] == nb_map_session
 
         av_acc = pinfos["acc"] / pinfos["nb_map_played"]
@@ -725,7 +697,7 @@ def show_averages(averages_dict, maps_dict, overall=0, no_color=False):
         av_right_ac_after = pinfos["leftAv"][2] / pinfos["nb_map_played"]
         av_acc_right = pinfos["accRight"] / pinfos["nb_map_played"]
         av_misses = pinfos["miss"] / pinfos["nb_map_played"]
-        av_pauses = pinfos["pause"] #/ pinfos["nb_map_played"]
+        av_pauses = pinfos["pause"]  # / pinfos["nb_map_played"]
         map_passed = ", ".join(pinfos["list_map_passed"])
         map_failed = ", ".join(pinfos["list_map_failed"])
         nb_map_failed = pinfos["nb_map_failed"]
@@ -746,7 +718,6 @@ def show_averages(averages_dict, maps_dict, overall=0, no_color=False):
         else:
             av_left_speed = 0
             av_right_speed = 0
-        
 
         rank_format = "{:.2f}".format(av_rank)
         acc_format = "{:.2f}".format(av_acc)
@@ -758,24 +729,12 @@ def show_averages(averages_dict, maps_dict, overall=0, no_color=False):
         right_av_format = "{:05.2f}, {:05.2f}, {:05.2f}".format(
             av_right_ac_before, av_right_ac_precision, av_right_ac_after
         )
-        distance_rsaber_format = (
-            "{:.2f}".format(distance_rsaber) if distance_rsaber else ""
-        )
-        distance_lsaber_format = (
-            "{:.2f}".format(distance_lsaber) if distance_lsaber else ""
-        )
-        distance_rhand_format = (
-            "{:.2f}".format(distance_rhand) if distance_rhand else ""
-        )
-        distance_lhand_format = (
-            "{:.2f}".format(distance_lhand) if distance_lhand else ""
-        )
-        av_left_speed_format = (
-            "{:.2f}".format(av_left_speed) if av_left_speed else ""
-        )
-        av_right_speed_format = (
-            "{:.2f}".format(av_right_speed) if av_right_speed else ""
-        )
+        distance_rsaber_format = "{:.2f}".format(distance_rsaber) if distance_rsaber else ""
+        distance_lsaber_format = "{:.2f}".format(distance_lsaber) if distance_lsaber else ""
+        distance_rhand_format = "{:.2f}".format(distance_rhand) if distance_rhand else ""
+        distance_lhand_format = "{:.2f}".format(distance_lhand) if distance_lhand else ""
+        av_left_speed_format = "{:.2f}".format(av_left_speed) if av_left_speed else ""
+        av_right_speed_format = "{:.2f}".format(av_right_speed) if av_right_speed else ""
         # if distance_rhand:
         print(
             f"{rank+1} - {Style.DIM}(AvRank:{rank_format}){Style.RESET_ALL} - {Style.BRIGHT}{name:28}{Style.RESET_ALL} with {acc_format:5}   (left: {acc_left_format:6} [{left_av_format:>18}]{Style.DIM}{Fore.BLUE}[{distance_lsaber_format:>8},{distance_lhand_format:>8}]{Style.RESET_ALL}{Style.DIM}{Fore.YELLOW}[{av_left_speed_format:>5}]{Style.RESET_ALL}, right: {acc_right_format:6} [{right_av_format:>18}]{Style.DIM}{Fore.BLUE}[{distance_rsaber_format:>8},{distance_rhand_format:>8}]{Style.RESET_ALL}{Style.DIM}{Fore.YELLOW}[{av_right_speed_format:>5}]{Style.RESET_ALL}, {av_misses:.2f} miss)"
@@ -813,8 +772,8 @@ def show_averages(averages_dict, maps_dict, overall=0, no_color=False):
                 pinfos["nb_map_played"],
                 nb_map_failed,
                 nb_map_session,
-                #av_left_speed_format,
-                #av_rightt_speed_format,
+                # av_left_speed_format,
+                # av_rightt_speed_format,
             )
         )
         # else:
@@ -840,14 +799,10 @@ def relevant_infos_as_csv(maps_dict):
             csvf.write(CSVF_HEADER_DISTANCE)
             # else:
             #    csvf.write(CSVF_HEADER)
-            sorted_pinfos = sorted(
-                infos[map_name], key=lambda kv: kv["score"], reverse=True
-            )
+            sorted_pinfos = sorted(infos[map_name], key=lambda kv: kv["score"], reverse=True)
             for rank, pinfos in enumerate(sorted_pinfos):
                 failed = (
-                    f"Failed at {pinfos['failed_time']:.2f}"
-                    if not pinfos["map_passed"]
-                    else ""
+                    f"Failed at {pinfos['failed_time']:.2f}" if not pinfos["map_passed"] else ""
                 )
                 # if pinfos['distance_rhand']:
                 csvf.write(
@@ -916,19 +871,19 @@ def merge_files(cleaned_list, name_template="cleaned-{}.log", cleaned=False):
     merged_file = name_template.format(DATETIME)
     with open(merged_file, "w") as outfile:
         if cleaned:
-            outfile.write('[')
+            outfile.write("[")
         for fname in cleaned_list:
             with open(fname) as infile:
                 outfile.write(infile.read())
                 if cleaned:
-                    outfile.write(',')
+                    outfile.write(",")
 
     if cleaned:
         all_file = ""
-        with open(merged_file,'r') as mfile:
+        with open(merged_file, "r") as mfile:
             all_file = mfile.read()
-        all_file = all_file[:-1] + ']'
-        with open(merged_file,'w') as mfile:
+        all_file = all_file[:-1] + "]"
+        with open(merged_file, "w") as mfile:
             mfile.write(all_file)
 
     return merged_file
@@ -958,9 +913,7 @@ def load_diff_maps():
             if len(splitted[0:-5]) > 1:
                 name_map = ",".join(splitted[0:-5])
                 # name_map = name_map[:-1]
-            name_map_full = (
-                f"{name_map} {author_map} {diff_map} by {mapper_map}".lower()
-            )
+            name_map_full = f"{name_map} {author_map} {diff_map} by {mapper_map}".lower()
             # print(name_map_full)
             MAPS_MISC_INFOS[name_map_full.strip()] = {
                 "time": time_map,
@@ -1046,7 +999,7 @@ def get_x_y_from_maps_per_type_and_date(maps_per_type_and_date):
     for type_maps in maps_per_type_and_date.keys():
         dates_x_axis = sorted(maps_per_type_and_date[type_maps].keys())
         players_averages = {}
-        #nb_players = 0
+        # nb_players = 0
         for date in dates_x_axis:
             players_averages = get_averages_on_date(
                 maps_per_type_and_date[type_maps][date], date, players_averages
@@ -1089,11 +1042,7 @@ def plot_graph(xy_per_type):
                 label=player,
             )
         legend(
-            loc="upper center",
-            bbox_to_anchor=(0.5, 1.15),
-            ncol=4,
-            fancybox=True,
-            shadow=True,
+            loc="upper center", bbox_to_anchor=(0.5, 1.15), ncol=4, fancybox=True, shadow=True,
         )
         title(type_maps, loc="left", fontsize=24, fontweight=4, color="orange")
         xlabel("Date")
@@ -1107,15 +1056,13 @@ def plot_graph(xy_per_type):
         # savefig(f'{type_maps}.png', orientation='landscape', papertype='a0', bbox_inches='tight')
 
 
-def graphs_averages_per_type_and_date_as_csv(
-    maps_per_type_and_date, plot_and_show=False
-):
+def graphs_averages_per_type_and_date_as_csv(maps_per_type_and_date, plot_and_show=False):
 
     xy_per_type = get_x_y_from_maps_per_type_and_date(maps_per_type_and_date)
 
     with open("graphs_averages_per_type_and_date.csv", "w") as gaptadf:
 
-        #for type_maps in xy_per_type.keys():
+        # for type_maps in xy_per_type.keys():
         for type_maps in xy_per_type:
             dates, players_averages = xy_per_type[type_maps]
             gaptadf.write(f"{type_maps}\n")
@@ -1154,8 +1101,7 @@ def classify_files_of_directory_by_date(directory):
 
 def main():
     parser = ArgumentParser(
-        prog="BSaviorLogParser",
-        description="Parse Beat-savior log file to get important infos",
+        prog="BSaviorLogParser", description="Parse Beat-savior log file to get important infos",
     )
     parser.add_argument(
         "-f",
@@ -1177,10 +1123,7 @@ def main():
         help="This flag goes with 'cleaned' if you want to indicate the name format of the files already cleaned",
     )
     parser.add_argument(
-        "-d",
-        "--directory",
-        type=str,
-        help="specify the directory in which to look for logs",
+        "-d", "--directory", type=str, help="specify the directory in which to look for logs",
     )
     parser.add_argument(
         "-r",
@@ -1231,13 +1174,13 @@ def main():
         "-ma",
         "--mapanalysis",
         type=str,
-        help="If --deep-trackers option is used, it is possible to specify a map so that multiple runs of this map will be showed on the same graph (will only show the maps specified though)",  
+        help="If --deep-trackers option is used, it is possible to specify a map so that multiple runs of this map will be showed on the same graph (will only show the maps specified though)",
     )
     parser.add_argument(
         "-av",
         "--averagedMA",
         type=bool,
-        help="If --mapanalysis option is used, it is possible to average the multiple runs into one",  
+        help="If --mapanalysis option is used, it is possible to average the multiple runs into one",
     )
     parser.add_argument(
         "-nc",
@@ -1246,7 +1189,7 @@ def main():
         help="By default, output is colorize. You can disable it with this flag",
         default=False,
     )
-    global DATETIME # pylint: disable=global-statement
+    global DATETIME  # pylint: disable=global-statement
 
     args = parser.parse_args()
 
@@ -1262,7 +1205,7 @@ def main():
             print("Date format not ok, defaulting to today")
             DATETIME = strftime("%Y%m%d")
 
-    #print(DATETIME)
+    # print(DATETIME)
 
     if args.directory:
         list_files = get_files_in_dir(args.directory)
