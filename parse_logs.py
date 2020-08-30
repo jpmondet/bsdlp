@@ -73,19 +73,23 @@ def clean_logfile(logfile):
     with open(logfile, "r") as logf:
         cleaned_logfile.write("[\n")
         for line in logf:
-            line_cleaned = "".join(line.split("Data]")[1:])[1:]
-            if "********" in line_cleaned:
-                continue
-            if "upload" in line_cleaned.lower():
-                continue
-            if "cheat in practice mode" in line_cleaned.lower():
-                continue
-            if "was a replay you cheater" in line_cleaned.lower():
-                continue
-            if line_cleaned.startswith("}"):
-                line_cleaned = "},\n"
-            if line_cleaned.endswith("}}\n"):
-                line_cleaned += ",\n"
+            try:
+                json.loads(line)
+                line_cleaned = line + ",\n"
+            except json.decoder.JSONDecodeError:
+                line_cleaned = "".join(line.split("Data]")[1:])[1:]
+                if "********" in line_cleaned:
+                    continue
+                if "upload" in line_cleaned.lower():
+                    continue
+                if "cheat in practice mode" in line_cleaned.lower():
+                    continue
+                if "was a replay you cheater" in line_cleaned.lower():
+                    continue
+                if line_cleaned.startswith("}"):
+                    line_cleaned = "},\n"
+                if line_cleaned.endswith("}}\n"):
+                    line_cleaned += ",\n"
             cleaned_logfile.write(line_cleaned)
 
     cleaned_logfile.seek(cleaned_logfile.tell() - 2, SEEK_SET)
