@@ -274,6 +274,8 @@ def show_multiple_runs_map(map_name, players_runs, sub_deeptrackers, averaged=Fa
             player_run += 1
         player_run = 1
 
+    if not player_name:
+        player_name = "Averaged"
     if not averaged:
         show_map(all_x, all_y, player_name, map_name)
     else:
@@ -393,8 +395,18 @@ v3:
                     all_x, all_y = get_run_as_coord(list_notes, sub_deeptrackers)
                     show_map(all_x, all_y, player_name, map_name)
 
+def reached_milestones(map_name, score, pauses, map_passed, misses, acc, milestones):
+    #TODO: check the score of the map against milestones
+    for campaign in milestones:
+        for milestone in campaign["milestones"]:
+            if milestone["map_to_beat"] in map_name:
+                if acc >= float(milestone["min_score"]):
+                    print(f"\n\n**Reached milestone {milestone} of {campaign["name_campaign"]}**\n\n")
+                    return True
+    return False
 
-def retrieve_relevant_infos(infos, restrict_to_maps):
+
+def retrieve_relevant_infos(infos, restrict_to_maps, milestones=[]):
     """
     New enum : SongDataType {
                 0: none
@@ -439,6 +451,10 @@ def retrieve_relevant_infos(infos, restrict_to_maps):
         failed_time = info_map["trackers"]["winTracker"]["endTime"]
         misses = info_map["trackers"]["hitTracker"]["miss"]
         acc = float(info_map["trackers"]["scoreTracker"]["modifiedRatio"]) * 100
+
+        if milestones and not reached_milestones(nap_name, score, pauses, map_passed, misses, acc, milestones):
+            continue
+
         acc_left = float(info_map["trackers"]["accuracyTracker"]["accLeft"])
         acc_right = float(info_map["trackers"]["accuracyTracker"]["accRight"])
         try:
@@ -1193,6 +1209,13 @@ def main():
         help="By default, output is colorize. You can disable it with this flag",
         default=False,
     )
+    parser.add_argument(
+        "-m",
+        "--milestones",
+        type=list,
+        help="Allows to pass a milestones list to check against",
+        default=[],
+    )
     global DATETIME  # pylint: disable=global-statement
 
     args = parser.parse_args()
@@ -1226,7 +1249,7 @@ def main():
         cleaned_logfile = clean_logfile(logfile)
     infos = parse_logfile(cleaned_logfile)
 
-    map_dict, averages_dict, notes_dict = retrieve_relevant_infos(infos, args.restrictmap)
+    map_dict, averages_dict, notes_dict = retrieve_relevant_infos(infos, args.restrictmap, args.milestones)
     if not map_dict:
         print("No maps found")
         return
