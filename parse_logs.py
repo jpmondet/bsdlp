@@ -399,10 +399,10 @@ def reached_milestones(map_name, score, pauses, map_passed, misses, acc, milesto
     #TODO: check the score of the map against milestones
     milestones = json.loads(milestones)
     for campaign in milestones:
-        for milestone in campaign["milestones"]:
-            if milestone["map_to_beat"] in map_name:
-                if acc >= float(milestone["min_score"]):
-                    print(f"\n\n**Reached milestone {milestone} of {campaign['name_campaign']}**\n\n")
+        for milestone, info_milestone in campaign["milestones"].items():
+            if info_milestone["map_to_beat"] in map_name:
+                if acc >= float(info_milestone["min_score"]):
+                    print(f"\n\n**Reached milestone {milestone} of {campaign['name_campaign']}** (having more than {info_milestone['min_score']} on map {info_milestone['map_to_beat']})\n\n")
                     return True
     return False
 
@@ -426,6 +426,7 @@ def retrieve_relevant_infos(infos, restrict_to_maps, milestones=[]):
     map_dict = {}  # stores player infos per map
     averages_dict = {}  # stores averages per player
     notes_dict = {}
+    reached_milestones = False
 
     if isinstance(infos, dict):
         infos = [infos]
@@ -453,7 +454,10 @@ def retrieve_relevant_infos(infos, restrict_to_maps, milestones=[]):
         misses = info_map["trackers"]["hitTracker"]["miss"]
         acc = float(info_map["trackers"]["scoreTracker"]["modifiedRatio"]) * 100
 
-        if milestones and not reached_milestones(map_name, score, pauses, map_passed, misses, acc, milestones):
+        #if milestones and not reached_milestones(map_name, score, pauses, map_passed, misses, acc, milestones):
+        if milestones:
+            if reached_milestones(map_name, score, pauses, map_passed, misses, acc, milestones):
+                reached_milestone = True
             continue
 
         acc_left = float(info_map["trackers"]["accuracyTracker"]["accLeft"])
@@ -625,6 +629,10 @@ def retrieve_relevant_infos(infos, restrict_to_maps, milestones=[]):
                 "nb_with_speed": nb_with_speed,
             }
             averages_dict[name] = averages_infos
+    
+    if not reached_milestone:
+        print("Sorry, didn't reach any milestone :anguished:")
+
     return map_dict, averages_dict, notes_dict
 
 
