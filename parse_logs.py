@@ -397,11 +397,12 @@ v3:
 
 def reached_milestones(map_name, score, pauses, map_passed, misses, acc, milestones):
     #TODO: check the score of the map against milestones
+    milestones = json.loads(milestones)
     for campaign in milestones:
         for milestone in campaign["milestones"]:
             if milestone["map_to_beat"] in map_name:
                 if acc >= float(milestone["min_score"]):
-                    print(f"\n\n**Reached milestone {milestone} of {campaign["name_campaign"]}**\n\n")
+                    print(f"\n\n**Reached milestone {milestone} of {campaign['name_campaign']}**\n\n")
                     return True
     return False
 
@@ -452,7 +453,7 @@ def retrieve_relevant_infos(infos, restrict_to_maps, milestones=[]):
         misses = info_map["trackers"]["hitTracker"]["miss"]
         acc = float(info_map["trackers"]["scoreTracker"]["modifiedRatio"]) * 100
 
-        if milestones and not reached_milestones(nap_name, score, pauses, map_passed, misses, acc, milestones):
+        if milestones and not reached_milestones(map_name, score, pauses, map_passed, misses, acc, milestones):
             continue
 
         acc_left = float(info_map["trackers"]["accuracyTracker"]["accLeft"])
@@ -1212,9 +1213,8 @@ def main():
     parser.add_argument(
         "-m",
         "--milestones",
-        type=list,
-        help="Allows to pass a milestones list to check against",
-        default=[],
+        type=str,
+        help="Allows to pass a milestones (as a json string) to check against",
     )
     global DATETIME  # pylint: disable=global-statement
 
