@@ -396,13 +396,12 @@ v3:
                     show_map(all_x, all_y, player_name, map_name)
 
 def reached_milestones(map_name, score, pauses, map_passed, misses, acc, milestones):
-    #TODO: check the score of the map against milestones
     milestones = json.loads(milestones)
     for campaign in milestones:
         for milestone, info_milestone in campaign["milestones"].items():
             if info_milestone["map_to_beat"] in map_name:
                 if acc >= float(info_milestone["min_score"]):
-                    print(f"\n\n**Reached milestone {milestone} of {campaign['name_campaign']}** (having more than {info_milestone['min_score']} on map {info_milestone['map_to_beat']})\n\n")
+                    print(f"\n\n :partying_face: **Reached milestone {milestone} of {campaign['name_campaign']}** :partying_face: (having more than {info_milestone['min_score']} on map {info_milestone['map_to_beat']})\n\n")
                     return True
     return False
 
@@ -426,7 +425,7 @@ def retrieve_relevant_infos(infos, restrict_to_maps, milestones=[]):
     map_dict = {}  # stores player infos per map
     averages_dict = {}  # stores averages per player
     notes_dict = {}
-    reached_milestones = False
+    reached_at_least_one_milestone = False
 
     if isinstance(infos, dict):
         infos = [infos]
@@ -434,7 +433,7 @@ def retrieve_relevant_infos(infos, restrict_to_maps, milestones=[]):
     for info_map in infos:
 
         if info_map.get("saberAColor"):
-            retrieve_player_infos(info_map)
+            #retrieve_player_infos(info_map)
             continue
 
         if "," in info_map["songMapper"]:
@@ -457,7 +456,7 @@ def retrieve_relevant_infos(infos, restrict_to_maps, milestones=[]):
         #if milestones and not reached_milestones(map_name, score, pauses, map_passed, misses, acc, milestones):
         if milestones:
             if reached_milestones(map_name, score, pauses, map_passed, misses, acc, milestones):
-                reached_milestone = True
+                reached_at_least_one_milestone = True
             continue
 
         acc_left = float(info_map["trackers"]["accuracyTracker"]["accLeft"])
@@ -630,7 +629,7 @@ def retrieve_relevant_infos(infos, restrict_to_maps, milestones=[]):
             }
             averages_dict[name] = averages_infos
     
-    if not reached_milestone:
+    if not reached_at_least_one_milestone and milestones:
         print("Sorry, didn't reach any milestone :anguished:")
 
     return map_dict, averages_dict, notes_dict
@@ -1258,7 +1257,7 @@ def main():
     infos = parse_logfile(cleaned_logfile)
 
     map_dict, averages_dict, notes_dict = retrieve_relevant_infos(infos, args.restrictmap, args.milestones)
-    if not map_dict:
+    if not map_dict and not args.milestones:
         print("No maps found")
         return
     show_relevant_infos(map_dict, args.nocolor)
