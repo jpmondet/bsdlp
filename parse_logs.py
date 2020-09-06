@@ -656,12 +656,12 @@ def show_relevant_infos(maps_dict, no_color=False):
 
     for map_name in infos.keys():
         if no_color:
-            Style.BRIGHT = "**"
-            Style.RESET_ALL = "**"
-            Style.DIM = " "
-            Fore.YELLOW = "**"
-            Fore.BLUE = "**"
-            Fore.RED = "**"
+            Style.BRIGHT = ""
+            Style.RESET_ALL = ""
+            Style.DIM = ""
+            Fore.YELLOW = ""
+            Fore.BLUE = ""
+            Fore.RED = ""
         print(f"{Style.BRIGHT}{map_name}{Style.RESET_ALL}")
         sorted_pinfos = sorted(infos[map_name], key=lambda kv: kv["score"], reverse=True)
         for rank, pinfos in enumerate(sorted_pinfos):
@@ -1266,7 +1266,8 @@ def main():
     # print(json.dumps(map_dict, indent=2))
     # print(json.dumps(averages_dict, indent=2))
     # show_relevant_infos(averages_dict)
-    show_averages(averages_dict, map_dict, args.overall, args.nocolor)
+    if not args.milestones:
+        show_averages(averages_dict, map_dict, args.overall, args.nocolor)
 
     if args.deeptrackers:
         handle_notes_values(notes_dict, args.deeptrackerstoshow, args.mapanalysis, args.averagedMA)
