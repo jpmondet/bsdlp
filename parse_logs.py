@@ -1,40 +1,19 @@
 """ This script computes a lot of stats from bsd logfiles.
 
-usage: BSaviorLogParser [-h] [-f LOGFILE] [-d DIRECTORY] [-o OVERALL] [-g GRAPH] [-w SHOW]
-                        [-dt DATE]
+    Most up-to-date usage guide is available with `parse_logs.py --help`
 
-Parse Beat-savior log file to get important infos
-
-optional arguments:
-  -h, --help            show this help message and exit
-  -f LOGFILE, --logfile LOGFILE
-                        specify the logfile, default : _latest.log
-  -d DIRECTORY, --directory DIRECTORY
-                        specify the directory in which to look for logs
-  -o OVERALL, --overall OVERALL
-                        Numbers of maps over ALL sessions (this option is not useful if you need
-                        to calculate only 1 session stats)
-  -g GRAPH, --graph GRAPH
-                        Indicates that graph infos (as csv) must be generated (files in directory
-                        must have a name like {player}-{date}. For example: dude-20200606.log)
-  -w SHOW, --show SHOW  Indicates that graph must be built & shown (pairs with --graph option)
-  -dt DATE, --date DATE
-                        By default, date used is today. You can modify this with this option (must
-                        be formatted like : 20201230)
 """
 
 #! /usr/bin/env python3
 
 # line-too-long is disabled because of csv headers & some prints
-# bad-continuation is disabled because is it handled by python-black
+# bad-continuation is disabled because it's handled by python-black
 # pylint: disable=line-too-long, bad-continuation
 
 from sys import exit as sexit  # prevents redefining exit builtin
 from os import access, R_OK, SEEK_SET, listdir, fsencode, fsdecode
 from time import strftime, strptime
-from argparse import ArgumentParser
 import json
-
 import requests
 from colorama import Fore, Style  # Back,
 from matplotlib.pyplot import (
@@ -51,6 +30,7 @@ from matplotlib.pyplot import (
     # savefig,
     # figure,
 )
+from frontend.cli import handle_args
 
 
 URLSS = "https://new.scoresaber.com/api/player/{}/full"
@@ -406,7 +386,7 @@ def reached_milestones(map_name, score, pauses, map_passed, misses, acc, milesto
     return False
 
 
-def retrieve_relevant_infos(infos, restrict_to_maps, milestones=[]):
+def retrieve_relevant_infos(infos, restrict_to_maps, milestones=[], top_only=False):
     """
     New enum : SongDataType {
                 0: none
@@ -631,6 +611,13 @@ def retrieve_relevant_infos(infos, restrict_to_maps, milestones=[]):
     
     if not reached_at_least_one_milestone and milestones:
         print("Sorry, didn't reach any milestone :anguished:")
+    
+    if top_only:
+        maps_d = map_dict.copy()
+        for map_name in maps_d.keys():
+            sorted_pinfos = sorted(map_dict[map_name], key=lambda kv: kv["score"], reverse=True)
+            map_dict[map_name] = [sorted_pinfos[0]]
+
 
     return map_dict, averages_dict, notes_dict
 
@@ -1128,104 +1115,10 @@ def classify_files_of_directory_by_date(directory):
 
 
 def main():
-    parser = ArgumentParser(
-        prog="BSaviorLogParser", description="Parse Beat-savior log file to get important infos",
-    )
-    parser.add_argument(
-        "-f",
-        "--logfile",
-        type=str,
-        help="specify the logfile, default : _latest.log",
-        default="_latest.log",
-    )
-    parser.add_argument(
-        "-c",
-        "--cleaned",
-        type=bool,
-        help="If this flag is set, we consider that files are already clean jsons",
-    )
-    parser.add_argument(
-        "-tple",
-        "--template",
-        type=str,
-        help="This flag goes with 'cleaned' if you want to indicate the name format of the files already cleaned",
-    )
-    parser.add_argument(
-        "-d", "--directory", type=str, help="specify the directory in which to look for logs",
-    )
-    parser.add_argument(
-        "-r",
-        "--restrictmap",
-        type=str,
-        help="Restrict parsing to specific maps separated by double colons (name doesn't need to be exact. It will be greedy tho). For example 'map1' or 'map1::map2'.",
-    )
-    parser.add_argument(
-        "-o",
-        "--overall",
-        type=int,
-        help="Numbers of maps over ALL sessions (this option is not useful if you need to calculate only 1 session stats)",
-        default=0,
-    )
-    parser.add_argument(
-        "-g",
-        "--graph",
-        type=bool,
-        help="Indicates that graph infos (as csv) must be generated (files in directory must have a name like {player}-{date}. For example: dude-20200606.log)",
-    )
-    parser.add_argument(
-        "-w",
-        "--show",
-        type=bool,
-        help="Indicates that graph must be built & shown (pairs with --graph option)",
-    )
-    parser.add_argument(
-        "-dt",
-        "--date",
-        type=str,
-        help="By default, date used is today. You can modify this with this option (must be formatted like : 20201230)",
-        default=strftime("%Y%m%d"),
-    )
-    parser.add_argument(
-        "-dp",
-        "--deeptrackers",
-        type=bool,
-        help="With this option, deep trackers will be tacken in account & graphs per map/player will be showed",
-    )
-    parser.add_argument(
-        "-dps",
-        "--deeptrackerstoshow",
-        type=str,
-        help="By default, we try to show all we have. This option allows to select only some sub-deeptrackers (for example : 'preswing,postswing')",
-        default="all",
-    )
-    parser.add_argument(
-        "-ma",
-        "--mapanalysis",
-        type=str,
-        help="If --deep-trackers option is used, it is possible to specify a map so that multiple runs of this map will be showed on the same graph (will only show the maps specified though)",
-    )
-    parser.add_argument(
-        "-av",
-        "--averagedMA",
-        type=bool,
-        help="If --mapanalysis option is used, it is possible to average the multiple runs into one",
-    )
-    parser.add_argument(
-        "-nc",
-        "--nocolor",
-        type=bool,
-        help="By default, output is colorize. You can disable it with this flag",
-        default=False,
-    )
-    parser.add_argument(
-        "-m",
-        "--milestones",
-        type=str,
-        help="Allows to pass a milestones (as a json string) to check against",
-    )
-    global DATETIME  # pylint: disable=global-statement
 
-    args = parser.parse_args()
+    args = handle_args()
+
+    global DATETIME  # pylint: disable=global-statement
 
     logfile = args.logfile
 
@@ -1256,7 +1149,7 @@ def main():
         cleaned_logfile = clean_logfile(logfile)
     infos = parse_logfile(cleaned_logfile)
 
-    map_dict, averages_dict, notes_dict = retrieve_relevant_infos(infos, args.restrictmap, args.milestones)
+    map_dict, averages_dict, notes_dict = retrieve_relevant_infos(infos, args.restrictmap, args.milestones, args.top)
     if not map_dict and not args.milestones:
         print("No maps found")
         return
@@ -1266,7 +1159,7 @@ def main():
     # print(json.dumps(map_dict, indent=2))
     # print(json.dumps(averages_dict, indent=2))
     # show_relevant_infos(averages_dict)
-    if not args.milestones:
+    if not args.milestones and not args.top:
         show_averages(averages_dict, map_dict, args.overall, args.nocolor)
 
     if args.deeptrackers:
