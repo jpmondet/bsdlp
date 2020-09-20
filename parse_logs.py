@@ -654,7 +654,7 @@ def show_relevant_infos(maps_dict, no_color=False):
         for rank, pinfos in enumerate(sorted_pinfos):
             # if pinfos['distance_rsaber']:
             print(
-                f"     {rank + 1} -  {pinfos['id']:28} with {pinfos['acc']:5}   (left: {pinfos['accLeft']:6} [{pinfos['leftAv']:>18}]{Style.DIM}{Fore.BLUE}[{pinfos['distance_lsaber']:>8},{pinfos['distance_lhand']:>8}]{Style.RESET_ALL}{Style.DIM}{Fore.YELLOW}[{pinfos['left_speed']:>5}]{Style.RESET_ALL}, right: {pinfos['accRight']:6} [{pinfos['rightAv']:>18}]{Style.DIM}{Fore.BLUE}[{pinfos['distance_rsaber']:>8},{pinfos['distance_rhand']:>8}]{Style.RESET_ALL}{Style.DIM}{Fore.YELLOW}[{pinfos['right_speed']:>5}]{Style.RESET_ALL}, {pinfos['miss']} miss)"
+                f"     {rank + 1} -  {pinfos['id']:28} with {pinfos['acc']:5} ({pinfos['score']})   (left: {pinfos['accLeft']:6} [{pinfos['leftAv']:>18}]{Style.DIM}{Fore.BLUE}[{pinfos['distance_lsaber']:>8},{pinfos['distance_lhand']:>8}]{Style.RESET_ALL}{Style.DIM}{Fore.YELLOW}[{pinfos['left_speed']:>5}]{Style.RESET_ALL}, right: {pinfos['accRight']:6} [{pinfos['rightAv']:>18}]{Style.DIM}{Fore.BLUE}[{pinfos['distance_rsaber']:>8},{pinfos['distance_rhand']:>8}]{Style.RESET_ALL}{Style.DIM}{Fore.YELLOW}[{pinfos['right_speed']:>5}]{Style.RESET_ALL}, {pinfos['miss']} miss)"
             )
             # else:
             #    print(f"     {rank + 1} -  {pinfos['id']:20} with {pinfos['acc']:5}   (left: {pinfos['accLeft']:6} [{pinfos['leftAv']:>18}], right: {pinfos['accRight']:6} [{pinfos['rightAv']:>18}], {pinfos['miss']} miss)")
